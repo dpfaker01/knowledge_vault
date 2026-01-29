@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KnowledgeVault Mobile Pro</title>
     
-<!-- PWA REQUIRED LINKS -->
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" href="icon_192.png">
-<link rel="apple-touch-icon" href="icon_192.png">
+    <!-- PWA REQUIRED LINKS -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon_192.png">
+    <link rel="apple-touch-icon" href="icon_192.png">
 
     <!-- External Libraries -->
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
@@ -66,18 +66,19 @@
             flex-direction: column;
             position: absolute;
             height: 100%;
-            z-index: 100;
+            z-index: 3000; /* Highest Priority */
             left: 0;
             top: 0;
-            transform: translateX(-100%); /* Default collapsed on mobile */
+            transform: translateX(-100%);
+            box-shadow: 2px 0 5px rgba(0,0,0,0.2);
         }
 
-        .sidebar.open { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
+        .sidebar.open { transform: translateX(0); }
 
         .sidebar-overlay {
             display: none;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 90;
+            background: rgba(0,0,0,0.5); z-index: 2900; /* Just below sidebar */
         }
         .sidebar-overlay.active { display: block; }
 
@@ -100,9 +101,12 @@
         .nav-item-container.open > ul { display: block; }
 
         .nav-item {
-            padding: 0.75rem 0.5rem; border-radius: 4px; cursor: pointer; user-select: none;
+            padding: 12px 10px; /* Bigger touch target */
+            border-radius: 4px; cursor: pointer; user-select: none;
             display: flex; align-items: center; width: 100%;
+            margin-bottom: 2px;
         }
+        .nav-item:active { background-color: rgba(0,0,0,0.1); }
         .nav-item.active { background-color: var(--primary-color); color: white; }
         .nav-item-toggle { width: 30px; height: 30px; text-align: center; line-height: 30px; transition: transform var(--transition); flex-shrink: 0; }
         .nav-item-container.open .nav-item-toggle { transform: rotate(90deg); }
@@ -111,30 +115,52 @@
         .nav-item.active .lock-icon { color: white; }
 
         /* --- Main Content --- */
-        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; margin-left: 0; }
+        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; margin-left: 0; z-index: 1; }
 
         @media (min-width: 769px) {
-            .sidebar { position: relative; transform: translateX(0); }
+            .sidebar { position: relative; transform: translateX(0); z-index: 100; }
             .sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-width)); transform: translateX(0); }
             .sidebar-overlay { display: none !important; }
         }
 
-        .main-header { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.5rem; border-bottom: 1px solid var(--border-color); height: var(--header-height); flex-shrink: 0; }
-        .toggle-sidebar { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-color); padding: 0.5rem; }
-        .search-container { position: relative; flex-grow: 1; min-width: 120px; }
+        /* HEADER FIXES FOR MOBILE */
+        .main-header { 
+            display: flex; 
+            align-items: center; 
+            gap: 0.5rem; 
+            padding: 0 0.5rem; 
+            border-bottom: 1px solid var(--border-color); 
+            height: var(--header-height); 
+            flex-shrink: 0; 
+            position: relative;
+            z-index: 2000; /* Ensure header is above editor */
+            background-color: var(--background-color);
+        }
+
+        .toggle-sidebar { 
+            background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--text-color); 
+            padding: 10px; /* Big touch target */
+            min-width: 44px; min-height: 44px;
+        }
+        
+        .search-container { position: relative; flex-grow: 1; min-width: 100px; }
         #searchInput { width: 100%; padding: 0.5rem 1rem 0.5rem 2.5rem; border: 1px solid var(--border-color); border-radius: 20px; background-color: var(--editor-bg); color: var(--text-color); }
         .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--secondary-color); }
-        #searchResults { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--editor-bg); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 5px; max-height: 400px; overflow-y: auto; z-index: 100; box-shadow: var(--shadow); }
-        .search-result-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid var(--border-color); }
-        .search-result-item:hover { background-color: var(--primary-color); color: white; }
+        #searchResults { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--editor-bg); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 5px; max-height: 400px; overflow-y: auto; z-index: 2100; box-shadow: var(--shadow); }
+        .search-result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         
-        .header-actions { display: flex; align-items: center; gap: 0.2rem; }
-        .action-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-color); padding: 0.5rem; }
-        .action-btn:disabled { color: var(--border-color); cursor: not-allowed; }
-        .action-btn.dirty::after { content: '•'; color: var(--danger-color); position: absolute; top: 5px; right: 5px; font-size: 1.5rem; }
+        .header-actions { display: flex; align-items: center; gap: 5px; }
+        .action-btn { 
+            background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-color); 
+            padding: 10px; /* Big touch target */
+            min-width: 44px; min-height: 44px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .action-btn:disabled { color: var(--border-color); opacity: 0.5; }
+        .action-btn.dirty { color: var(--primary-color); }
 
         /* --- NOTE VIEW --- */
-        .note-view { flex-grow: 1; display: flex; flex-direction: column; padding: 1rem; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .note-view { flex-grow: 1; display: flex; flex-direction: column; padding: 1rem; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 10; }
         #welcomeScreen { text-align: center; margin: auto; padding: 1rem; }
         .note-title-input { width: 100%; border: none; background: transparent; font-size: 1.8rem; font-weight: bold; color: var(--text-color); padding: 0.5rem 0; margin-bottom: 0.5rem; }
         .note-title-input:focus { outline: none; }
@@ -144,9 +170,9 @@
         .tag-remove { margin-left: 0.5rem; cursor: pointer; font-weight: bold; }
         .tag-input { border: none; background: transparent; color: var(--text-color); padding: 0.25rem; min-width: 100px; }
         
-        .editor-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); border-bottom: none; border-radius: 4px 4px 0 0; position: sticky; top: 0; z-index: 10; }
-        .editor-btn { background: none; border: none; width: 32px; height: 32px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-color); }
-        .editor-btn:hover { background-color: rgba(0, 0, 0, 0.1); }
+        .editor-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); border-bottom: none; border-radius: 4px 4px 0 0; position: sticky; top: 0; z-index: 20; }
+        .editor-btn { background: none; border: none; width: 36px; height: 36px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-color); font-size: 1.2rem; }
+        .editor-btn:active { background-color: rgba(0, 0, 0, 0.1); }
         
         .editor-content { flex-grow: 1; padding: 1rem; border: 1px solid var(--border-color); border-radius: 0 0 4px 4px; background-color: var(--editor-bg); color: var(--text-color); overflow-y: auto; line-height: 1.7; min-height: 50vh; }
         .editor-content:focus { outline: none; border-color: var(--primary-color); }
@@ -155,27 +181,28 @@
         .auto-link { border-bottom: 1px dotted var(--primary-color); cursor: help; background-color: rgba(74, 107, 175, 0.05); }
         
         /* FAB */
-        .fab-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 50; }
-        .fab { width: 56px; height: 56px; border-radius: 50%; background-color: var(--primary-color); color: white; border: none; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; transition: var(--transition); }
+        .fab-container { position: fixed; bottom: 2rem; right: 1.5rem; z-index: 500; }
+        .fab { width: 60px; height: 60px; border-radius: 50%; background-color: var(--primary-color); color: white; border: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 2rem; transition: var(--transition); }
+        .fab:active { transform: scale(0.9); }
         
         /* Modals */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
         .modal-content { background: var(--editor-bg); padding: 2rem; border-radius: 8px; width: 95%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-shrink: 0; }
-        .modal-close { font-size: 1.5rem; cursor: pointer; background: none; border: none; color: var(--text-color); }
+        .modal-close { font-size: 1.5rem; cursor: pointer; background: none; border: none; color: var(--text-color); padding: 10px; }
         .modal-body { overflow-y: auto; }
         #visualizationContainer, #footnotesBody { width: 100%; min-height: 40vh; background: var(--editor-bg); }
         
         /* Login */
-        .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: var(--background-color); position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; }
+        .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: var(--background-color); position: fixed; top: 0; left: 0; width: 100%; z-index: 5000; }
         .login-card { width: 90%; max-width: 400px; background-color: var(--editor-bg); border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); padding: 2rem; }
-        .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--background-color); color: var(--text-color); margin-bottom: 10px; }
-        .btn-primary { background-color: var(--primary-color); color: white; width: 100%; padding: 0.75rem; border: none; border-radius: 4px; font-size: 1rem; }
+        .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--background-color); color: var(--text-color); margin-bottom: 10px; font-size: 16px; }
+        .btn-primary { background-color: var(--primary-color); color: white; width: 100%; padding: 0.75rem; border: none; border-radius: 4px; font-size: 1.1rem; cursor: pointer; }
         
         /* Utility */
         .d-none { display: none !important; }
-        #contextMenu { display: none; position: absolute; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); z-index: 2000; box-shadow: var(--shadow); }
+        #contextMenu { display: none; position: absolute; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); z-index: 4500; box-shadow: var(--shadow); }
         #contextMenu button { display: block; width: 100%; padding: 0.75rem 1rem; border: none; background: none; color: var(--text-color); text-align: left; }
         
         #mobileFileInput { display: none; }
@@ -216,13 +243,14 @@
                 </div>
                 <div class="header-actions">
                     <button id="loadDataBtn" class="action-btn" title="Load">📤</button>
-                    <button id="saveDataBtn" class="action-btn" title="Save" disabled>💾</button>
+                    <!-- IMPORTANT: Disabled attribute removed to ensure clickable -->
+                    <button id="saveDataBtn" class="action-btn" title="Save">💾</button>
                     <button id="mobileMenuBtn" class="action-btn">⋮</button>
                 </div>
             </header>
 
             <!-- Extended Menu -->
-            <div id="extendedMenu" style="display:none; position:absolute; top:60px; right:10px; background:var(--sidebar-bg); border:1px solid var(--border-color); border-radius:4px; z-index:1001; padding:10px; box-shadow:var(--shadow);">
+            <div id="extendedMenu" style="display:none; position:absolute; top:60px; right:10px; background:var(--sidebar-bg); border:1px solid var(--border-color); border-radius:4px; z-index:2500; padding:10px; box-shadow:var(--shadow); min-width: 150px;">
                 <button id="generateEbookBtn" class="action-btn w-100" style="text-align:left;" disabled>📚 PDF</button>
                 <button id="screenshotBtn" class="action-btn w-100" style="text-align:left;">📸 Shot</button>
                 <button id="duplicateNoteBtn" class="action-btn w-100" style="text-align:left;" disabled>👯 Dupe</button>
@@ -249,7 +277,6 @@
                     <button type="button" class="editor-btn" data-command="insertOrderedList">1.</button>
                     <button type="button" class="editor-btn" data-command="createLink">🔗</button>
                     <button type="button" class="editor-btn" id="addImageBtn">🖼️</button>
-                    <button type="button" class="editor-btn" id="speechToTextBtn">🎤</button>
                 </div>
                 <div id="editorContent" class="editor-content d-none" contenteditable="false"></div>
             </div>
@@ -318,8 +345,23 @@
             mobileFileInput: document.getElementById('mobileFileInput')
         };
         
+        // --- Helper for Mobile Taps ---
+        // This fixes issues where 'click' events are lost or delayed on phones
+        function addTapListener(element, callback) {
+            if(!element) return;
+            element.addEventListener('click', (e) => {
+                e.stopPropagation();
+                callback(e);
+            });
+            // Also listen for touchstart to force immediate reaction
+            element.addEventListener('touchstart', (e) => {
+                e.stopPropagation(); 
+                // We don't preventDefault here to allow scrolling if user drags, 
+                // but for simple buttons, the click usually follows.
+            }, {passive: true});
+        }
+
         function initializeApp() {
-            // FIX: Auto-seed Admin user if no users exist
             if (!localStorage.getItem('kv_users')) {
                 const defaultUser = [{username: "Admin", pin: "0000"}];
                 localStorage.setItem('kv_users', JSON.stringify(defaultUser));
@@ -369,6 +411,7 @@
             
             const userSelect = document.getElementById('userSelect');
             userSelect.addEventListener('change', () => { document.getElementById('newUsernameGroup').classList.toggle('d-none', userSelect.value === '--new--'); });
+            
             document.getElementById('loginBtn').addEventListener('click', handleLogin);
         }
 
@@ -378,9 +421,7 @@
             const pinInput = document.getElementById('pin');
             const pin = pinInput.value;
             
-            if (userSelect.value === "") {
-                return alert("Please select a user.");
-            }
+            if (userSelect.value === "") return alert("Please select a user.");
 
             if (userSelect.value === '--new--') {
                 const newUsername = document.getElementById('newUsername').value.trim();
@@ -401,12 +442,11 @@
 
         function setDirtyState(isDirty) {
             app.isDirty = isDirty;
+            // Visual feedback only, button is always active now
             if (isDirty) {
                 elements.saveDataBtn.classList.add('dirty');
-                elements.saveDataBtn.innerHTML = '💾•';
             } else {
                 elements.saveDataBtn.classList.remove('dirty');
-                elements.saveDataBtn.innerHTML = '💾';
             }
         }
 
@@ -416,40 +456,46 @@
         }
 
         function setupEventListeners() {
-            elements.toggleSidebar.addEventListener('click', toggleSidebar);
-            if(elements.mobileCloseSidebar) elements.mobileCloseSidebar.addEventListener('click', toggleSidebar);
-            elements.sidebarOverlay.addEventListener('click', toggleSidebar);
+            // FIX: Using dedicated click handlers for robust mobile response
+            addTapListener(elements.toggleSidebar, toggleSidebar);
+            if(elements.mobileCloseSidebar) addTapListener(elements.mobileCloseSidebar, toggleSidebar);
+            addTapListener(elements.sidebarOverlay, toggleSidebar);
             
-            elements.mobileMenuBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
+            addTapListener(elements.mobileMenuBtn, () => {
                 elements.extendedMenu.style.display = elements.extendedMenu.style.display === 'block' ? 'none' : 'block';
             });
+
+            // Close extended menu when clicking elsewhere
             document.addEventListener('click', (e) => {
                  if (!elements.extendedMenu.contains(e.target) && e.target !== elements.mobileMenuBtn) {
                      elements.extendedMenu.style.display = 'none';
                  }
             });
 
-            elements.themeToggle.addEventListener('click', toggleTheme);
-            elements.logoutBtn.addEventListener('click', logout);
+            addTapListener(elements.themeToggle, toggleTheme);
+            addTapListener(elements.logoutBtn, logout);
             
             // LOAD/SAVE HANDLERS
-            elements.loadDataBtn.addEventListener('click', () => elements.mobileFileInput.click());
+            addTapListener(elements.loadDataBtn, () => elements.mobileFileInput.click());
+            
             elements.mobileFileInput.addEventListener('change', handleAndroidLoad);
-            elements.saveDataBtn.addEventListener('click', handleAndroidSave);
+            
+            // SAVE BUTTON FIX: ensure it is always clickable and provides feedback
+            addTapListener(elements.saveDataBtn, handleAndroidSave);
 
-            elements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
-            elements.visualizeBtn.addEventListener('click', renderVisualization);
-            elements.lockNoteBtn.addEventListener('click', toggleNoteLock);
-            elements.addSubNoteBtn.addEventListener('click', () => { if(app.activeItemId) addNewItem(app.activeItemId) });
-            elements.duplicateNoteBtn.addEventListener('click', handleDuplicateNote);
-            elements.screenshotBtn.addEventListener('click', () => handleScreenshot(false));
-            elements.generateEbookBtn.addEventListener('click', handleGenerateEbook);
-            elements.fab.addEventListener('click', () => addNewItem(null));
+            addTapListener(elements.deleteNoteBtn, handleDeleteNote);
+            addTapListener(elements.visualizeBtn, renderVisualization);
+            addTapListener(elements.lockNoteBtn, toggleNoteLock);
+            addTapListener(elements.addSubNoteBtn, () => { if(app.activeItemId) addNewItem(app.activeItemId) });
+            addTapListener(elements.duplicateNoteBtn, handleDuplicateNote);
+            addTapListener(elements.screenshotBtn, () => handleScreenshot(false));
+            addTapListener(elements.generateEbookBtn, handleGenerateEbook);
+            addTapListener(elements.fab, () => addNewItem(null));
             
             elements.noteTitleInput.addEventListener('input', debounce(() => { saveNote(); }, 500));
             elements.editorContent.addEventListener('input', debounce(() => { saveNote(); }, 500));
             
+            // Link Handling
             elements.editorContent.addEventListener('click', (e) => {
                 const link = e.target.closest('a');
                 if (link && link.href) {
@@ -470,8 +516,7 @@
             
             // Editor Buttons
             document.querySelectorAll('.editor-btn').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.preventDefault();
+                addTapListener(button, (e) => {
                     const command = button.dataset.command;
                     if (command === 'createLink') {
                         const selection = window.getSelection();
@@ -483,8 +528,6 @@
                     } else if (button.id === 'addImageBtn') {
                         const url = prompt('Enter image URL:');
                         if (url) document.execCommand('insertImage', false, url);
-                    } else if (button.id === 'speechToTextBtn') {
-                        alert('Dictation not supported in this version');
                     } else {
                         document.execCommand(command, false, null);
                     }
@@ -507,17 +550,20 @@
                     renderAppFromState();
                     navigateToItem(null);
                     setDirtyState(false);
-                    elements.saveDataBtn.disabled = false;
+                    // Enable buttons
                     elements.fab.disabled = false;
                     elements.searchInput.disabled = false;
                     elements.mobileFileInput.value = '';
-                    alert(`Loaded!`);
-                } catch (err) { alert("Failed to load file."); }
+                    alert(`Loaded successfully!`);
+                } catch (err) { alert("Failed to load file. Format error."); }
             };
             reader.readAsText(file);
         }
 
         function handleAndroidSave() {
+            // FIX: Added immediate feedback
+            if (app.items.length === 0) return alert("Nothing to save yet.");
+            
             try {
                 const exportObj = {
                     version: "0.1.13",
@@ -535,10 +581,11 @@
                 a.click();
                 setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 0);
                 setDirtyState(false);
-            } catch (err) { alert("Failed to save."); }
+                // alert("File downloading..."); // Optional feedback
+            } catch (err) { alert("Failed to save: " + err.message); }
         }
 
-        // --- Core Logic (Same as original) ---
+        // --- Core Logic ---
         function renderSidebar() {
             const itemMap = new Map(app.items.map(item => [item.id, { ...item, children: [] }]));
             const tree = [];
@@ -560,8 +607,9 @@
             li.className = 'nav-item-container';
             if (app.uiState.openNodes.has(item.id)) { li.classList.add('open'); }
             li.dataset.itemId = item.id;
+            
+            // Drag Drop logic (simplified for mobile)
             li.addEventListener('dragover', handleDragOver);
-            li.addEventListener('dragleave', handleDragLeave);
             li.addEventListener('drop', handleDrop);
 
             const itemDiv = document.createElement('div');
@@ -572,12 +620,17 @@
             const lockIcon = item.isLocked ? '<span class="lock-icon">🔒</span>' : '';
             itemDiv.innerHTML = `<span class="nav-item-toggle">${item.children.length > 0 ? '▶' : ''}</span><span class="nav-item-title">${item.title || "Untitled"}</span>${lockIcon}`;
             
+            // Click Handling
             itemDiv.addEventListener('click', (e) => {
                 if (!e.target.classList.contains('nav-item-toggle')) {
                     navigateToItem(item.id);
-                    if (window.innerWidth <= 768) { elements.sidebar.classList.add('collapsed'); elements.sidebarOverlay.classList.remove('active'); }
+                    if (window.innerWidth <= 768) { 
+                        elements.sidebar.classList.add('collapsed'); 
+                        elements.sidebarOverlay.classList.remove('active'); 
+                    }
                 }
             });
+            
             itemDiv.addEventListener('dragstart', handleDragStart);
 
             const toggle = itemDiv.querySelector('.nav-item-toggle');
@@ -616,6 +669,7 @@
             elements.editorToolbar.classList.toggle('d-none', !item);
             elements.editorContent.classList.toggle('d-none', !item);
 
+            // Enable/disable buttons based on selection
             elements.deleteNoteBtn.disabled = !item;
             elements.visualizeBtn.disabled = !item;
             elements.lockNoteBtn.disabled = !item;
@@ -912,7 +966,23 @@
         
         function handleContextMenu(e) { if (window.getSelection().toString().trim().length === 0) return; e.preventDefault(); elements.contextMenu.style.top = `${e.pageY}px`; elements.contextMenu.style.left = `${e.pageX}px`; elements.contextMenu.style.display = 'block'; }
         
-        function toggleSidebar() { elements.sidebar.classList.toggle('collapsed'); elements.sidebarOverlay.classList.toggle('active', !elements.sidebar.classList.contains('collapsed')); app.settings.sidebarCollapsed = elements.sidebar.classList.contains('collapsed'); saveSettings(); }
+        function toggleSidebar() { 
+            elements.sidebar.classList.toggle('collapsed'); 
+            const isClosed = elements.sidebar.classList.contains('collapsed');
+            
+            // Handle Overlay logic
+            if (window.innerWidth <= 768) {
+                if (!isClosed) {
+                    elements.sidebarOverlay.classList.add('active');
+                } else {
+                    elements.sidebarOverlay.classList.remove('active');
+                }
+            }
+            
+            app.settings.sidebarCollapsed = isClosed; 
+            saveSettings(); 
+        }
+        
         function toggleTheme() { const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', newTheme); app.settings.darkMode = newTheme === 'dark'; saveSettings(); }
         function loadSettings() { const settings = JSON.parse(localStorage.getItem(`kv_settings_${app.currentUser.username}`)); if (!settings) return; app.settings = settings; if (settings.darkMode) document.documentElement.setAttribute('data-theme', 'dark'); if (settings.sidebarCollapsed && window.innerWidth > 768) elements.sidebar.classList.add('collapsed'); }
         function saveSettings() { localStorage.setItem(`kv_settings_${app.currentUser.username}`, JSON.stringify(app.settings)); }
@@ -936,5 +1006,4 @@
     });
     </script>
 </body>
-
 </html>
