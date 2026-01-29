@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KnowledgeVault Mobile Pro</title>
+    
+    <!-- PWA REQUIRED LINKS -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <!-- External Libraries -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #4a6baf;
+            --secondary-color: #6c757d;
+            --danger-color: #dc3545;
+            --background-color: #ffffff;
+            --text-color: #212529;
+            --sidebar-bg: #f8f9fa;
+            --editor-bg: #ffffff;
+            --border-color: #dee2e6;
+            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --transition: all 0.2s ease-in-out;
+            --header-height: 60px;
+            --sidebar-width: 280px;
+        }
+
+        [data-theme="dark"] {
+            --background-color: #1a1a1a;
+            --text-color: #e9ecef;
+            --sidebar-bg: #2d2d2d;
+            --editor-bg: #252526;
+            --border-color: #495057;
+            --danger-color: #e57373;
+            --shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .app-container { display: flex; height: 100vh; width: 100%; position: relative; }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            transition: transform var(--transition);
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            height: 100%;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            transform: translateX(-100%); /* Default collapsed on mobile */
+        }
+
+        .sidebar.open { transform: translateX(0); box-shadow: 5px 0 15px rgba(0,0,0,0.2); }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 90;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        .sidebar-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: var(--header-height);
+        }
+
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
+        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 0.5rem; -webkit-overflow-scrolling: touch; }
+        .sidebar-nav ul { list-style: none; padding-left: 1rem; }
+        .sidebar-nav > ul { padding-left: 0; }
+        
+        .nav-item-container { position: relative; }
+        .nav-item-container > ul { display: none; }
+        .nav-item-container.open > ul { display: block; }
+
+        .nav-item {
+            padding: 0.75rem 0.5rem; border-radius: 4px; cursor: pointer; user-select: none;
+            display: flex; align-items: center; width: 100%;
+        }
+        .nav-item.active { background-color: var(--primary-color); color: white; }
+        .nav-item-toggle { width: 30px; height: 30px; text-align: center; line-height: 30px; transition: transform var(--transition); flex-shrink: 0; }
+        .nav-item-container.open .nav-item-toggle { transform: rotate(90deg); }
+        .nav-item-title { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 4px; }
+        .lock-icon { margin-left: 8px; color: var(--secondary-color); }
+        .nav-item.active .lock-icon { color: white; }
+
+        /* --- Main Content --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; margin-left: 0; }
+
+        @media (min-width: 769px) {
+            .sidebar { position: relative; transform: translateX(0); }
+            .sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-width)); transform: translateX(0); }
+            .sidebar-overlay { display: none !important; }
+        }
+
+        .main-header { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.5rem; border-bottom: 1px solid var(--border-color); height: var(--header-height); flex-shrink: 0; }
+        .toggle-sidebar { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-color); padding: 0.5rem; }
+        .search-container { position: relative; flex-grow: 1; min-width: 120px; }
+        #searchInput { width: 100%; padding: 0.5rem 1rem 0.5rem 2.5rem; border: 1px solid var(--border-color); border-radius: 20px; background-color: var(--editor-bg); color: var(--text-color); }
+        .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--secondary-color); }
+        #searchResults { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--editor-bg); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 5px; max-height: 400px; overflow-y: auto; z-index: 100; box-shadow: var(--shadow); }
+        .search-result-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid var(--border-color); }
+        .search-result-item:hover { background-color: var(--primary-color); color: white; }
+        
+        .header-actions { display: flex; align-items: center; gap: 0.2rem; }
+        .action-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-color); padding: 0.5rem; }
+        .action-btn:disabled { color: var(--border-color); cursor: not-allowed; }
+        .action-btn.dirty::after { content: '•'; color: var(--danger-color); position: absolute; top: 5px; right: 5px; font-size: 1.5rem; }
+
+        /* --- NOTE VIEW --- */
+        .note-view { flex-grow: 1; display: flex; flex-direction: column; padding: 1rem; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        #welcomeScreen { text-align: center; margin: auto; padding: 1rem; }
+        .note-title-input { width: 100%; border: none; background: transparent; font-size: 1.8rem; font-weight: bold; color: var(--text-color); padding: 0.5rem 0; margin-bottom: 0.5rem; }
+        .note-title-input:focus { outline: none; }
+        
+        .tag-area { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; min-height: 28px; }
+        .tag { display: inline-flex; align-items: center; background-color: var(--secondary-color); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.85rem; }
+        .tag-remove { margin-left: 0.5rem; cursor: pointer; font-weight: bold; }
+        .tag-input { border: none; background: transparent; color: var(--text-color); padding: 0.25rem; min-width: 100px; }
+        
+        .editor-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); border-bottom: none; border-radius: 4px 4px 0 0; position: sticky; top: 0; z-index: 10; }
+        .editor-btn { background: none; border: none; width: 32px; height: 32px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-color); }
+        .editor-btn:hover { background-color: rgba(0, 0, 0, 0.1); }
+        
+        .editor-content { flex-grow: 1; padding: 1rem; border: 1px solid var(--border-color); border-radius: 0 0 4px 4px; background-color: var(--editor-bg); color: var(--text-color); overflow-y: auto; line-height: 1.7; min-height: 50vh; }
+        .editor-content:focus { outline: none; border-color: var(--primary-color); }
+        .editor-content img { max-width: 100%; border-radius: 4px; cursor: pointer; }
+        .editor-content a { color: var(--primary-color); cursor: pointer; text-decoration: underline; }
+        .auto-link { border-bottom: 1px dotted var(--primary-color); cursor: help; background-color: rgba(74, 107, 175, 0.05); }
+        
+        /* FAB */
+        .fab-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 50; }
+        .fab { width: 56px; height: 56px; border-radius: 50%; background-color: var(--primary-color); color: white; border: none; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; transition: var(--transition); }
+        
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--editor-bg); padding: 2rem; border-radius: 8px; width: 95%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-shrink: 0; }
+        .modal-close { font-size: 1.5rem; cursor: pointer; background: none; border: none; color: var(--text-color); }
+        .modal-body { overflow-y: auto; }
+        #visualizationContainer, #footnotesBody { width: 100%; min-height: 40vh; background: var(--editor-bg); }
+        
+        /* Login */
+        .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: var(--background-color); position: fixed; top: 0; left: 0; width: 100%; z-index: 2000; }
+        .login-card { width: 90%; max-width: 400px; background-color: var(--editor-bg); border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); padding: 2rem; }
+        .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--background-color); color: var(--text-color); margin-bottom: 10px; }
+        .btn-primary { background-color: var(--primary-color); color: white; width: 100%; padding: 0.75rem; border: none; border-radius: 4px; font-size: 1rem; }
+        
+        /* Utility */
+        .d-none { display: none !important; }
+        #contextMenu { display: none; position: absolute; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); z-index: 2000; box-shadow: var(--shadow); }
+        #contextMenu button { display: block; width: 100%; padding: 0.75rem 1rem; border: none; background: none; color: var(--text-color); text-align: left; }
+        
+        #mobileFileInput { display: none; }
+        .pdf-page-break { page-break-before: always; }
+    </style>
+</head>
+<body>
+    <!-- Hidden File Input -->
+    <input type="file" id="mobileFileInput" accept=".json">
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <!-- Content injected by JS -->
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" style="display:none;" class="app-container">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar collapsed">
+            <div class="sidebar-header">
+                <div class="logo">📚 KnowledgeVault</div>
+                <button id="mobileCloseSidebar" class="action-btn" style="display:none;">✕</button>
+            </div>
+            <nav id="sidebarNav" class="sidebar-nav"></nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main id="mainContent" class="main-content">
+            <header class="main-header">
+                <button id="toggleSidebar" class="toggle-sidebar">☰</button>
+                <div class="search-container">
+                    <span class="search-icon">🧠</span>
+                    <input type="text" id="searchInput" placeholder="Search..." disabled>
+                    <div id="searchResults"></div>
+                </div>
+                <div class="header-actions">
+                    <button id="loadDataBtn" class="action-btn" title="Load">📤</button>
+                    <button id="saveDataBtn" class="action-btn" title="Save" disabled>💾</button>
+                    <button id="mobileMenuBtn" class="action-btn">⋮</button>
+                </div>
+            </header>
+
+            <!-- Extended Menu -->
+            <div id="extendedMenu" style="display:none; position:absolute; top:60px; right:10px; background:var(--sidebar-bg); border:1px solid var(--border-color); border-radius:4px; z-index:1001; padding:10px; box-shadow:var(--shadow);">
+                <button id="generateEbookBtn" class="action-btn w-100" style="text-align:left;" disabled>📚 PDF</button>
+                <button id="screenshotBtn" class="action-btn w-100" style="text-align:left;">📸 Shot</button>
+                <button id="duplicateNoteBtn" class="action-btn w-100" style="text-align:left;" disabled>👯 Dupe</button>
+                <button id="addSubNoteBtn" class="action-btn w-100" style="text-align:left;" disabled>➕ Sub</button>
+                <button id="lockNoteBtn" class="action-btn w-100" style="text-align:left;" disabled>🔓 Lock</button>
+                <button id="visualizeBtn" class="action-btn w-100" style="text-align:left;" disabled>🕸️ Graph</button>
+                <button id="deleteNoteBtn" class="action-btn w-100" style="text-align:left; color:var(--danger-color);" disabled>🗑️ Del</button>
+                <button id="themeToggle" class="action-btn w-100" style="text-align:left;">🌙 Theme</button>
+                <button id="logoutBtn" class="action-btn w-100" style="text-align:left;">↩️ Log</button>
+            </div>
+
+            <div id="noteView" class="note-view">
+                 <div id="welcomeScreen">
+                    <h1>Welcome to KnowledgeVault</h1>
+                    <p>Click the Upload icon 📤 to open your JSON backup.</p>
+                </div>
+                <input type="text" id="noteTitleInput" class="note-title-input d-none" placeholder="Untitled Note...">
+                <div id="tagArea" class="tag-area d-none"></div>
+                <div id="editorToolbar" class="editor-toolbar d-none">
+                    <button type="button" class="editor-btn" data-command="bold"><b>B</b></button>
+                    <button type="button" class="editor-btn" data-command="italic"><i>I</i></button>
+                    <button type="button" class="editor-btn" data-command="underline"><u>U</u></button>
+                    <button type="button" class="editor-btn" data-command="insertUnorderedList">•</button>
+                    <button type="button" class="editor-btn" data-command="insertOrderedList">1.</button>
+                    <button type="button" class="editor-btn" data-command="createLink">🔗</button>
+                    <button type="button" class="editor-btn" id="addImageBtn">🖼️</button>
+                    <button type="button" class="editor-btn" id="speechToTextBtn">🎤</button>
+                </div>
+                <div id="editorContent" class="editor-content d-none" contenteditable="false"></div>
+            </div>
+        </main>
+
+        <div id="fabContainer" class="fab-container">
+            <button id="fab" class="fab" disabled>+</button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="footnotesModal" class="modal-overlay"></div>
+    <div id="visualizationModal" class="modal-overlay"></div>
+    <div id="contextMenu"><button id="grabTextLinkBtn">Grab Text Link</button></div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- Service Worker Registration for PWA ---
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
+
+        const app = {
+            currentUser: null,
+            activeItemId: null,
+            items: [],
+            fileHandle: null,
+            isDirty: false,
+            phraseIndex: new Map(),
+            settings: { darkMode: false, sidebarCollapsed: true },
+            uiState: { openNodes: new Set() }
+        };
+
+        const elements = {
+            loginScreen: document.getElementById('loginScreen'),
+            mainApp: document.getElementById('mainApp'),
+            sidebar: document.getElementById('sidebar'),
+            sidebarOverlay: document.getElementById('sidebarOverlay'),
+            sidebarNav: document.getElementById('sidebarNav'),
+            toggleSidebar: document.getElementById('toggleSidebar'),
+            mobileCloseSidebar: document.getElementById('mobileCloseSidebar'),
+            themeToggle: document.getElementById('themeToggle'),
+            logoutBtn: document.getElementById('logoutBtn'),
+            loadDataBtn: document.getElementById('loadDataBtn'),
+            saveDataBtn: document.getElementById('saveDataBtn'),
+            deleteNoteBtn: document.getElementById('deleteNoteBtn'),
+            noteView: document.getElementById('noteView'),
+            welcomeScreen: document.getElementById('welcomeScreen'),
+            noteTitleInput: document.getElementById('noteTitleInput'),
+            editorContent: document.getElementById('editorContent'),
+            editorToolbar: document.getElementById('editorToolbar'),
+            contextMenu: document.getElementById('contextMenu'),
+            searchInput: document.getElementById('searchInput'),
+            searchResults: document.getElementById('searchResults'),
+            grabTextLinkBtn: document.getElementById('grabTextLinkBtn'),
+            fab: document.getElementById('fab'),
+            addSubNoteBtn: document.getElementById('addSubNoteBtn'),
+            duplicateNoteBtn: document.getElementById('duplicateNoteBtn'),
+            screenshotBtn: document.getElementById('screenshotBtn'),
+            generateEbookBtn: document.getElementById('generateEbookBtn'),
+            lockNoteBtn: document.getElementById('lockNoteBtn'),
+            visualizeBtn: document.getElementById('visualizeBtn'),
+            tagArea: document.getElementById('tagArea'),
+            mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+            extendedMenu: document.getElementById('extendedMenu'),
+            mobileFileInput: document.getElementById('mobileFileInput')
+        };
+        
+        function initializeApp() {
+            // FIX: Auto-seed Admin user if no users exist
+            if (!localStorage.getItem('kv_users')) {
+                const defaultUser = [{username: "Admin", pin: "0000"}];
+                localStorage.setItem('kv_users', JSON.stringify(defaultUser));
+            }
+
+            try {
+                app.currentUser = JSON.parse(localStorage.getItem('kv_currentUser'));
+                if (app.currentUser) {
+                    elements.loginScreen.style.display = 'none';
+                    elements.mainApp.style.display = 'flex';
+                    setupEventListeners();
+                    loadSettings();
+                    if(window.innerWidth <= 768) {
+                        elements.mobileCloseSidebar.style.display = 'block';
+                    }
+                } else {
+                    renderLoginScreen();
+                }
+            } catch (error) { console.error("Error:", error); renderLoginScreen(); }
+        }
+        
+        function renderLoginScreen() {
+            elements.mainApp.style.display = 'none';
+            elements.loginScreen.style.display = 'flex';
+            const users = JSON.parse(localStorage.getItem('kv_users') || '[]');
+            let optionsHtml = users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
+            
+            elements.loginScreen.innerHTML = `
+                <div class="login-card">
+                    <div class="login-header"><h1>📚 KnowledgeVault</h1></div>
+                    <div class="form-group">
+                        <label>Select User</label>
+                        <select id="userSelect" class="form-control">
+                            <option value="">-- Select User --</option>
+                            ${optionsHtml}
+                            <option value="--new--">Create New Account...</option>
+                        </select>
+                    </div>
+                    <div class="form-group d-none" id="newUsernameGroup">
+                        <input type="text" id="newUsername" class="form-control" placeholder="New Username">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="pin" class="form-control" placeholder="PIN (4 digits)" maxlength="4" inputmode="numeric">
+                    </div>
+                    <button id="loginBtn" class="btn-primary">Login / Create</button>
+                </div>`;
+            
+            const userSelect = document.getElementById('userSelect');
+            userSelect.addEventListener('change', () => { document.getElementById('newUsernameGroup').classList.toggle('d-none', userSelect.value === '--new--'); });
+            document.getElementById('loginBtn').addEventListener('click', handleLogin);
+        }
+
+        function handleLogin() {
+            const users = JSON.parse(localStorage.getItem('kv_users') || '[]');
+            const userSelect = document.getElementById('userSelect');
+            const pinInput = document.getElementById('pin');
+            const pin = pinInput.value;
+            
+            if (userSelect.value === "") {
+                return alert("Please select a user.");
+            }
+
+            if (userSelect.value === '--new--') {
+                const newUsername = document.getElementById('newUsername').value.trim();
+                if (!newUsername || !pin || pin.length !== 4) return alert('New accounts require a unique username and a 4-digit PIN.');
+                if (users.some(u => u.username.toLowerCase() === newUsername.toLowerCase())) return alert('Username already exists.');
+                const newUser = { username: newUsername, pin };
+                users.push(newUser);
+                localStorage.setItem('kv_users', JSON.stringify(users));
+                app.currentUser = newUser;
+            } else {
+                const selectedUser = users.find(u => u.username === userSelect.value);
+                if (!selectedUser || selectedUser.pin !== pin) { pinInput.style.border = '1px solid red'; return alert('Invalid PIN.'); }
+                app.currentUser = selectedUser;
+            }
+            localStorage.setItem('kv_currentUser', JSON.stringify(app.currentUser));
+            initializeApp();
+        }
+
+        function setDirtyState(isDirty) {
+            app.isDirty = isDirty;
+            if (isDirty) {
+                elements.saveDataBtn.classList.add('dirty');
+                elements.saveDataBtn.innerHTML = '💾•';
+            } else {
+                elements.saveDataBtn.classList.remove('dirty');
+                elements.saveDataBtn.innerHTML = '💾';
+            }
+        }
+
+        function renderAppFromState() {
+            buildPhraseIndex();
+            renderSidebar();
+        }
+
+        function setupEventListeners() {
+            elements.toggleSidebar.addEventListener('click', toggleSidebar);
+            if(elements.mobileCloseSidebar) elements.mobileCloseSidebar.addEventListener('click', toggleSidebar);
+            elements.sidebarOverlay.addEventListener('click', toggleSidebar);
+            
+            elements.mobileMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                elements.extendedMenu.style.display = elements.extendedMenu.style.display === 'block' ? 'none' : 'block';
+            });
+            document.addEventListener('click', (e) => {
+                 if (!elements.extendedMenu.contains(e.target) && e.target !== elements.mobileMenuBtn) {
+                     elements.extendedMenu.style.display = 'none';
+                 }
+            });
+
+            elements.themeToggle.addEventListener('click', toggleTheme);
+            elements.logoutBtn.addEventListener('click', logout);
+            
+            // LOAD/SAVE HANDLERS
+            elements.loadDataBtn.addEventListener('click', () => elements.mobileFileInput.click());
+            elements.mobileFileInput.addEventListener('change', handleAndroidLoad);
+            elements.saveDataBtn.addEventListener('click', handleAndroidSave);
+
+            elements.deleteNoteBtn.addEventListener('click', handleDeleteNote);
+            elements.visualizeBtn.addEventListener('click', renderVisualization);
+            elements.lockNoteBtn.addEventListener('click', toggleNoteLock);
+            elements.addSubNoteBtn.addEventListener('click', () => { if(app.activeItemId) addNewItem(app.activeItemId) });
+            elements.duplicateNoteBtn.addEventListener('click', handleDuplicateNote);
+            elements.screenshotBtn.addEventListener('click', () => handleScreenshot(false));
+            elements.generateEbookBtn.addEventListener('click', handleGenerateEbook);
+            elements.fab.addEventListener('click', () => addNewItem(null));
+            
+            elements.noteTitleInput.addEventListener('input', debounce(() => { saveNote(); }, 500));
+            elements.editorContent.addEventListener('input', debounce(() => { saveNote(); }, 500));
+            
+            elements.editorContent.addEventListener('click', (e) => {
+                const link = e.target.closest('a');
+                if (link && link.href) {
+                    e.preventDefault();
+                    const href = link.getAttribute('href');
+                    if (href.startsWith('internal-link://')) { handleInternalLink(href); } 
+                    else if (href.startsWith('http')) { window.open(href, '_blank', 'noopener,noreferrer'); }
+                } else if (e.target.classList.contains('auto-link')) {
+                    handleAutoLinkClick(e.target.textContent);
+                }
+            });
+
+            elements.editorContent.addEventListener('contextmenu', handleContextMenu);
+            document.addEventListener('click', () => { elements.contextMenu.style.display = 'none'; elements.searchResults.style.display = 'none'; });
+            elements.grabTextLinkBtn.addEventListener('click', handleGrabTextLink);
+            elements.searchInput.addEventListener('input', debounce(handleSearch, 300));
+            elements.searchInput.addEventListener('click', (e) => e.stopPropagation());
+            
+            // Editor Buttons
+            document.querySelectorAll('.editor-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const command = button.dataset.command;
+                    if (command === 'createLink') {
+                        const selection = window.getSelection();
+                        let url = prompt('Enter the URL:');
+                        if (url) {
+                            if (!url.startsWith('http')) { url = 'https://' + url; }
+                            document.execCommand('createLink', false, url);
+                        }
+                    } else if (button.id === 'addImageBtn') {
+                        const url = prompt('Enter image URL:');
+                        if (url) document.execCommand('insertImage', false, url);
+                    } else if (button.id === 'speechToTextBtn') {
+                        alert('Dictation not supported in this version');
+                    } else {
+                        document.execCommand(command, false, null);
+                    }
+                    elements.editorContent.focus();
+                });
+            });
+            setupEditorEventListeners();
+        }
+        
+        function handleAndroidLoad(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data || !Array.isArray(data.items)) throw new Error("Invalid file");
+                    app.items = data.items;
+                    app.activeItemId = null;
+                    renderAppFromState();
+                    navigateToItem(null);
+                    setDirtyState(false);
+                    elements.saveDataBtn.disabled = false;
+                    elements.fab.disabled = false;
+                    elements.searchInput.disabled = false;
+                    elements.mobileFileInput.value = '';
+                    alert(`Loaded!`);
+                } catch (err) { alert("Failed to load file."); }
+            };
+            reader.readAsText(file);
+        }
+
+        function handleAndroidSave() {
+            try {
+                const exportObj = {
+                    version: "0.1.13",
+                    exportedAt: new Date().toISOString(),
+                    username: app.currentUser.username,
+                    items: app.items
+                };
+                const jsonString = JSON.stringify(exportObj, null, 2);
+                const blob = new Blob([jsonString], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `knowledgevault_${app.currentUser.username}_${Date.now()}.json`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 0);
+                setDirtyState(false);
+            } catch (err) { alert("Failed to save."); }
+        }
+
+        // --- Core Logic (Same as original) ---
+        function renderSidebar() {
+            const itemMap = new Map(app.items.map(item => [item.id, { ...item, children: [] }]));
+            const tree = [];
+            for (const item of itemMap.values()) {
+                if (item.parentId && itemMap.has(item.parentId)) {
+                    itemMap.get(item.parentId).children.push(item);
+                } else {
+                    tree.push(item);
+                }
+            }
+            elements.sidebarNav.innerHTML = '';
+            const rootUl = document.createElement('ul');
+            tree.forEach(rootItem => rootUl.appendChild(createNavItem(rootItem)));
+            elements.sidebarNav.appendChild(rootUl);
+        }
+
+        function createNavItem(item) {
+            const li = document.createElement('li');
+            li.className = 'nav-item-container';
+            if (app.uiState.openNodes.has(item.id)) { li.classList.add('open'); }
+            li.dataset.itemId = item.id;
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('dragleave', handleDragLeave);
+            li.addEventListener('drop', handleDrop);
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'nav-item';
+            itemDiv.setAttribute('draggable', true);
+            if (item.id === app.activeItemId) itemDiv.classList.add('active');
+            
+            const lockIcon = item.isLocked ? '<span class="lock-icon">🔒</span>' : '';
+            itemDiv.innerHTML = `<span class="nav-item-toggle">${item.children.length > 0 ? '▶' : ''}</span><span class="nav-item-title">${item.title || "Untitled"}</span>${lockIcon}`;
+            
+            itemDiv.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('nav-item-toggle')) {
+                    navigateToItem(item.id);
+                    if (window.innerWidth <= 768) { elements.sidebar.classList.add('collapsed'); elements.sidebarOverlay.classList.remove('active'); }
+                }
+            });
+            itemDiv.addEventListener('dragstart', handleDragStart);
+
+            const toggle = itemDiv.querySelector('.nav-item-toggle');
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                li.classList.toggle('open');
+                if (li.classList.contains('open')) { app.uiState.openNodes.add(item.id); } else { app.uiState.openNodes.delete(item.id); }
+            });
+            
+            li.appendChild(itemDiv);
+            if (item.children.length > 0) {
+                const childUl = document.createElement('ul');
+                item.children.sort((a, b) => a.order - b.order).forEach(child => childUl.appendChild(createNavItem(child)));
+                li.appendChild(childUl);
+            }
+            return li;
+        }
+
+        function addNewItem(parentId) {
+            const newId = Date.now();
+            const newItem = { id: newId, parentId, title: "Untitled", content: "", tags: [], isLocked: false, createdAt: new Date().toISOString(), modifiedAt: new Date().toISOString() };
+            app.items.push(newItem);
+            setDirtyState(true);
+            renderAppFromState();
+            navigateToItem(newId);
+        }
+
+        async function navigateToItem(itemId) {
+            app.items.forEach(i => i.isTemporarilyUnlocked = false);
+            app.activeItemId = itemId;
+            const item = app.items.find(i => i.id === itemId);
+            const hasData = app.items.length > 0;
+            elements.welcomeScreen.classList.toggle('d-none', hasData);
+            elements.noteTitleInput.classList.toggle('d-none', !item);
+            elements.tagArea.classList.toggle('d-none', !item);
+            elements.editorToolbar.classList.toggle('d-none', !item);
+            elements.editorContent.classList.toggle('d-none', !item);
+
+            elements.deleteNoteBtn.disabled = !item;
+            elements.visualizeBtn.disabled = !item;
+            elements.lockNoteBtn.disabled = !item;
+            elements.addSubNoteBtn.disabled = !item;
+            elements.duplicateNoteBtn.disabled = !item;
+            elements.generateEbookBtn.disabled = !item;
+            
+            if (item) {
+                if (item.isLocked && !item.isTemporarilyUnlocked) {
+                    const pin = prompt("Enter PIN:");
+                    if (pin === app.currentUser.pin) { item.isTemporarilyUnlocked = true; } else { alert("Incorrect PIN."); app.activeItemId = null; navigateToItem(null); return; }
+                }
+                elements.noteTitleInput.value = item.title;
+                elements.editorContent.innerHTML = await renderContentWithAutoLinks(item.content || "");
+                elements.noteTitleInput.disabled = false;
+                elements.editorContent.setAttribute('contenteditable', true);
+                renderTags(item.tags || []);
+                elements.lockNoteBtn.innerHTML = item.isLocked ? '🔒' : '🔓';
+            } else {
+                elements.noteTitleInput.value = "";
+                elements.editorContent.innerHTML = "";
+                elements.noteTitleInput.disabled = true;
+                elements.editorContent.setAttribute('contenteditable', false);
+                renderTags([]);
+                elements.lockNoteBtn.innerHTML = '🔓';
+            }
+            
+            document.querySelectorAll('.sidebar .nav-item.active').forEach(el => el.classList.remove('active'));
+            if(item) {
+                const navEl = document.querySelector(`.sidebar li[data-item-id="${item.id}"] > .nav-item`);
+                if(navEl) navEl.classList.add('active');
+            }
+        }
+        
+        async function saveNote() {
+            if (!app.activeItemId) return;
+            const itemIndex = app.items.findIndex(i => i.id === app.activeItemId);
+            if (itemIndex === -1) return;
+            const tags = Array.from(elements.tagArea.querySelectorAll('.tag')).map(t => t.dataset.tag);
+            app.items[itemIndex] = { ...app.items[itemIndex], title: elements.noteTitleInput.value, content: elements.editorContent.innerHTML, tags: tags, modifiedAt: new Date().toISOString() };
+            setDirtyState(true);
+            await buildPhraseIndex();
+            const navTitle = document.querySelector(`li[data-item-id="${app.activeItemId}"] .nav-item-title`);
+            if (navTitle) navTitle.textContent = app.items[itemIndex].title;
+        }
+
+        function toggleNoteLock() {
+            if (!app.activeItemId) return;
+            const item = app.items.find(i => i.id === app.activeItemId);
+            if (item) {
+                item.isLocked = !item.isLocked;
+                item.isTemporarilyUnlocked = true;
+                elements.lockNoteBtn.innerHTML = item.isLocked ? '🔒' : '🔓';
+                setDirtyState(true);
+                renderSidebar();
+                const navEl = document.querySelector(`.sidebar li[data-item-id="${item.id}"] > .nav-item`);
+                if(navEl) navEl.classList.add('active');
+            }
+        }
+
+        function handleTagInput(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const tagName = e.target.value.trim();
+                if (tagName) {
+                    const currentTags = Array.from(elements.tagArea.querySelectorAll('.tag')).map(t => t.dataset.tag);
+                    if (!currentTags.includes(tagName)) {
+                        elements.tagArea.insertBefore(createTagElement(tagName), e.target);
+                        saveNote();
+                    }
+                    e.target.value = '';
+                }
+            }
+        }
+
+        function createTagElement(tagName) {
+            const tagEl = document.createElement('span');
+            tagEl.className = 'tag'; tagEl.dataset.tag = tagName;
+            tagEl.innerHTML = `${tagName} <span class="tag-remove">×</span>`;
+            tagEl.querySelector('.tag-remove').addEventListener('click', () => { tagEl.remove(); saveNote(); });
+            return tagEl;
+        }
+
+        function renderTags(tags = []) {
+            elements.tagArea.innerHTML = '';
+            tags.forEach(tagName => { elements.tagArea.appendChild(createTagElement(tagName)); });
+            const input = document.createElement('input');
+            input.type = 'text'; input.className = 'tag-input'; input.placeholder = 'Add tag...';
+            input.addEventListener('keydown', handleTagInput);
+            elements.tagArea.appendChild(input);
+        }
+        
+        async function buildPhraseIndex() {
+            app.phraseIndex.clear();
+            const stopWords = new Set(['the', 'a', 'an', 'is', 'in', 'it', 'of', 'and', 'for', 'to', 'was', 'were', 'on', 'at', 'that', 'with']);
+            const tempDiv = document.createElement('div');
+            for (const item of app.items) {
+                if(item.isLocked) continue;
+                tempDiv.innerHTML = item.content;
+                const text = `${item.title} ${tempDiv.textContent || ''}`.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+                const words = text.split(/\s+/).filter(word => word && !stopWords.has(word));
+                for (let i = 0; i <= words.length - 2; i++) {
+                    for (let j = 2; j <= 4 && i + j <= words.length; j++) {
+                        const phrase = words.slice(i, i + j).join(' ');
+                        if (!app.phraseIndex.has(phrase)) app.phraseIndex.set(phrase, new Set());
+                        app.phraseIndex.get(phrase).add(item.id);
+                    }
+                }
+            }
+        }
+
+        async function renderContentWithAutoLinks(content) {
+            if (!content) return '';
+            const linkablePhrases = [...app.phraseIndex.entries()]
+                .filter(([phrase, ids]) => ids.size > 1 && ids.has(app.activeItemId))
+                .map(([phrase, ids]) => phrase)
+                .sort((a, b) => b.length - a.length);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            linkablePhrases.forEach(phrase => {
+                const regex = new RegExp(`\\b(${phrase})\\b`, 'gi');
+                tempDiv.innerHTML = tempDiv.innerHTML.replace(regex, (match, p1, offset, string) => {
+                    const surrounding = string.substring(Math.max(0, offset - 10), offset + match.length + 10);
+                    if (surrounding.includes('<a') || surrounding.includes('auto-link')) { return match; }
+                    return `<span class="auto-link">${match}</span>`;
+                });
+            });
+            return tempDiv.innerHTML;
+        }
+        
+        function handleAutoLinkClick(phrase) {
+            const normalizedPhrase = phrase.toLowerCase();
+            const ids = app.phraseIndex.get(normalizedPhrase);
+            if (!ids || ids.size < 2) return;
+            const modal = document.getElementById('footnotesModal');
+            modal.innerHTML = `<div class="modal-content"><div class="modal-header"><h2 class="modal-title">Mentions of "${phrase}"</h2><button class="modal-close">×</button></div><div class="modal-body" id="footnotesBody"></div></div>`;
+            modal.querySelector('.modal-close').addEventListener('click', () => modal.classList.remove('active'));
+            const otherItemIds = [...ids].filter(id => id !== app.activeItemId);
+            const body = modal.querySelector('#footnotesBody');
+            if (otherItemIds.length === 0) { body.innerHTML = '<p>No other mentions found.</p>'; } else {
+                otherItemIds.forEach(id => {
+                    const item = app.items.find(i => i.id === id);
+                    if (!item) return;
+                    const footnoteDiv = document.createElement('div');
+                    footnoteDiv.className = 'footnote-item';
+                    footnoteDiv.innerHTML = `<div class="footnote-title">${item.title}</div>`;
+                    footnoteDiv.addEventListener('click', () => { navigateToItem(item.id); modal.classList.remove('active'); });
+                    body.appendChild(footnoteDiv);
+                });
+            }
+            modal.classList.add('active');
+        }
+
+        function handleDragStart(e) { e.stopPropagation(); e.dataTransfer.setData('text/plain', e.target.closest('.nav-item-container').dataset.itemId); }
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
+        function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+        function handleDrop(e) {
+            e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove('drag-over');
+            const draggedItemId = parseInt(e.dataTransfer.getData('text/plain'));
+            const targetItemId = parseInt(e.currentTarget.dataset.itemId);
+            if (draggedItemId === targetItemId) return;
+            const draggedItem = app.items.find(i => i.id === draggedItemId);
+            draggedItem.parentId = targetItemId;
+            setDirtyState(true);
+            renderAppFromState();
+        }
+        
+        async function handleGrabTextLink() {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.toString().trim().length === 0) return;
+            const range = selection.getRangeAt(0);
+            let container = range.commonAncestorContainer;
+            while (container) {
+                if (container.nodeType === 1 && container.matches('p, div, li, h1, h2, h3, h4, h5, h6, blockquote')) {
+                    if (!container.dataset.blockId) {
+                        container.dataset.blockId = `kv-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                        const itemIndex = app.items.findIndex(i => i.id === app.activeItemId);
+                        app.items[itemIndex].content = elements.editorContent.innerHTML;
+                        setDirtyState(true);
+                    }
+                    const link = `internal-link://${app.activeItemId}#${container.dataset.blockId}`;
+                    navigator.clipboard.writeText(link).then(() => alert(`Link copied!`));
+                    return;
+                }
+                container = container.parentElement;
+            }
+            alert("No linkable block found.");
+        }
+
+        function handleDuplicateNote() {
+            if (!app.activeItemId) return;
+            const originalItem = app.items.find(i => i.id === app.activeItemId);
+            const newId = Date.now();
+            const newItem = { ...originalItem, id: newId, title: `${originalItem.title} (Copy)`, createdAt: new Date().toISOString(), modifiedAt: new Date().toISOString() };
+            app.items.push(newItem);
+            setDirtyState(true);
+            renderAppFromState();
+            navigateToItem(newId);
+        }
+        
+        async function handleInternalLink(url) {
+            try {
+                const [noteIdStr, blockId] = url.replace('internal-link://', '').split('#');
+                await navigateToItem(Number(noteIdStr));
+                setTimeout(() => {
+                    if (blockId) {
+                        const block = elements.editorContent.querySelector(`[data-block-id="${blockId}"]`);
+                        if (block) { block.scrollIntoView({ behavior: 'smooth', block: 'center' }); block.classList.add('block-highlight'); }
+                    }
+                }, 100);
+            } catch (error) { console.error("Link Error:", error); }
+        }
+        
+        function renderVisualization() {
+            const modal = document.getElementById('visualizationModal');
+            modal.innerHTML = `<div class="modal-content"><div class="modal-header"><h2 class="modal-title">Graph</h2><button class="modal-close">×</button></div><div class="modal-body"><div id="visualizationContainer" style="height: 60vh;"></div></div></div>`;
+            modal.querySelector('.modal-close').addEventListener('click', () => modal.classList.remove('active'));
+            modal.classList.add('active');
+            const nodes = app.items.map(item => ({ id: item.id, label: item.title, shape: 'box', color: item.id === app.activeItemId ? '#ffc107' : '#97c2fc' }));
+            const edges = app.items.filter(item => item.parentId).map(item => ({ from: item.parentId, to: item.id, arrows: 'to' }));
+            const container = document.getElementById('visualizationContainer');
+            const network = new vis.Network(container, { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, { layout: { hierarchical: { direction: "UD", sortMethod: "directed", shakeTowards: "roots" } }, physics: { hierarchicalRepulsion: { nodeDistance: 150 } } });
+            network.on("doubleClick", params => { if (params.nodes.length > 0) { modal.classList.remove('active'); navigateToItem(params.nodes[0]); } });
+        }
+        
+        function handleScreenshot(isModal = false) {
+            const targetElement = isModal ? document.getElementById('visualizationContainer') : document.getElementById('noteView');
+            html2canvas(targetElement, { backgroundColor: getComputedStyle(document.body).getPropertyValue('--editor-bg').trim(), useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = "screenshot.png";
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            });
+        }
+
+        function handleGenerateEbook() {
+            if (!app.activeItemId) return;
+            const rootItem = app.items.find(i => i.id === app.activeItemId);
+            if (!rootItem) return;
+            const opt = { margin: 0.5, filename: `${rootItem.title}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+            const content = `<h1>${rootItem.title}</h1>${rootItem.content}`; 
+            html2pdf().from(content).set(opt).save();
+        }
+
+        function handleDeleteNote() {
+            if (!app.activeItemId || !confirm("Delete this note and children?")) return;
+            const idsToDelete = new Set([app.activeItemId]);
+            const queue = [app.activeItemId];
+            while(queue.length > 0) {
+                const currentId = queue.shift();
+                const children = app.items.filter(i => i.parentId === currentId);
+                for (const child of children) { idsToDelete.add(child.id); queue.push(child.id); }
+            }
+            app.items = app.items.filter(i => !idsToDelete.has(i.id));
+            setDirtyState(true);
+            app.activeItemId = null;
+            renderAppFromState();
+            navigateToItem(null);
+        }
+
+        function setupEditorEventListeners() {
+            const editor = elements.editorContent;
+            editor.addEventListener('paste', e => {
+                const items = (e.clipboardData || window.clipboardData).items;
+                for (const item of items) {
+                    if (item.type.indexOf('image') !== -1) {
+                        e.preventDefault();
+                        const file = item.getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = event => { document.execCommand('insertImage', false, event.target.result); };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+                }
+            });
+        }
+
+        function handleSearch() {
+            const query = elements.searchInput.value.toLowerCase().trim();
+            if (query.length < 2) { elements.searchResults.style.display = 'none'; return; }
+            const results = app.items.filter(item => !item.isLocked && (item.title.toLowerCase().includes(query) || (item.content || '').toLowerCase().includes(query)));
+            elements.searchResults.innerHTML = '';
+            if(results.length > 0) {
+                results.forEach(res => {
+                    const resDiv = document.createElement('div');
+                    resDiv.className = 'search-result-item';
+                    resDiv.innerHTML = `<div class="search-result-item-title">${res.title}</div>`;
+                    resDiv.addEventListener('click', () => { navigateToItem(res.id); elements.searchResults.style.display = 'none'; elements.searchInput.value = ''; });
+                    elements.searchResults.appendChild(resDiv);
+                });
+                elements.searchResults.style.display = 'block';
+            } else { elements.searchResults.style.display = 'none'; }
+        }
+        
+        function handleContextMenu(e) { if (window.getSelection().toString().trim().length === 0) return; e.preventDefault(); elements.contextMenu.style.top = `${e.pageY}px`; elements.contextMenu.style.left = `${e.pageX}px`; elements.contextMenu.style.display = 'block'; }
+        
+        function toggleSidebar() { elements.sidebar.classList.toggle('collapsed'); elements.sidebarOverlay.classList.toggle('active', !elements.sidebar.classList.contains('collapsed')); app.settings.sidebarCollapsed = elements.sidebar.classList.contains('collapsed'); saveSettings(); }
+        function toggleTheme() { const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', newTheme); app.settings.darkMode = newTheme === 'dark'; saveSettings(); }
+        function loadSettings() { const settings = JSON.parse(localStorage.getItem(`kv_settings_${app.currentUser.username}`)); if (!settings) return; app.settings = settings; if (settings.darkMode) document.documentElement.setAttribute('data-theme', 'dark'); if (settings.sidebarCollapsed && window.innerWidth > 768) elements.sidebar.classList.add('collapsed'); }
+        function saveSettings() { localStorage.setItem(`kv_settings_${app.currentUser.username}`, JSON.stringify(app.settings)); }
+        function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
+        
+        function logout() {
+            if (app.isDirty && !confirm("Unsaved changes. Logout?")) return;
+            app.currentUser = null;
+            localStorage.removeItem('kv_currentUser');
+            app.items = [];
+            app.activeItemId = null;
+            elements.sidebarNav.innerHTML = '';
+            navigateToItem(null);
+            elements.saveDataBtn.disabled = true;
+            elements.fab.disabled = true;
+            elements.searchInput.disabled = true;
+            renderLoginScreen();
+        }
+
+        initializeApp();
+    });
+    </script>
+</body>
+</html>
