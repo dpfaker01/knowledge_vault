@@ -1,4 +1,4 @@
-const CACHE_NAME = "kv-v1";
+const CACHE_NAME = "kv-v2"; // Changed from v1 to force update
 const ASSETS = [
     "./", 
     "./index.html", 
