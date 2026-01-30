@@ -52,6 +52,8 @@
             overflow: hidden;
             height: 100vh;
             width: 100vw;
+            /* ANDROID FIX: Prevent pull-to-refresh and overscroll on Android */
+            overscroll-behavior: none;
         }
 
         .app-container { display: flex; height: 100vh; width: 100%; position: relative; }
@@ -66,21 +68,22 @@
             flex-direction: column;
             position: absolute;
             height: 100%;
-            z-index: 3000; /* Highest Priority */
+            z-index: 3000;
             left: 0;
             top: 0;
-            transform: translateX(-100%);
+            transform: translateX(-100%); /* Mobile default: hidden */
             box-shadow: 2px 0 5px rgba(0,0,0,0.2);
         }
 
-        .sidebar.open { transform: translateX(0); }
-
-        .sidebar-overlay {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 2900; /* Just below sidebar */
+        .sidebar.open { transform: translateX(0); } /* Mobile: visible */
+        
+        /* ANDROID FIX: Ensure sidebar is scrollable smoothly on Android */
+        .sidebar-nav { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding: 0.5rem; 
+            -webkit-overflow-scrolling: touch; 
         }
-        .sidebar-overlay.active { display: block; }
 
         .sidebar-header {
             padding: 1rem;
@@ -92,7 +95,6 @@
         }
 
         .logo { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); }
-        .sidebar-nav { flex-grow: 1; overflow-y: auto; padding: 0.5rem; -webkit-overflow-scrolling: touch; }
         .sidebar-nav ul { list-style: none; padding-left: 1rem; }
         .sidebar-nav > ul { padding-left: 0; }
         
@@ -101,29 +103,68 @@
         .nav-item-container.open > ul { display: block; }
 
         .nav-item {
-            padding: 12px 10px; /* Bigger touch target */
-            border-radius: 4px; cursor: pointer; user-select: none;
-            display: flex; align-items: center; width: 100%;
+            padding: 12px 10px;
+            border-radius: 4px; 
+            cursor: pointer; 
+            user-select: none;
+            display: flex; 
+            align-items: center; 
+            width: 100%;
             margin-bottom: 2px;
         }
         .nav-item:active { background-color: rgba(0,0,0,0.1); }
         .nav-item.active { background-color: var(--primary-color); color: white; }
-        .nav-item-toggle { width: 30px; height: 30px; text-align: center; line-height: 30px; transition: transform var(--transition); flex-shrink: 0; }
+        .nav-item-toggle { 
+            width: 30px; 
+            height: 30px; 
+            text-align: center; 
+            line-height: 30px; 
+            transition: transform var(--transition); 
+            flex-shrink: 0; 
+            /* ANDROID FIX: Better touch targets */
+            min-width: 44px;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
         .nav-item-container.open .nav-item-toggle { transform: rotate(90deg); }
         .nav-item-title { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 4px; }
         .lock-icon { margin-left: 8px; color: var(--secondary-color); }
         .nav-item.active .lock-icon { color: white; }
 
+        .sidebar-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2900;
+        }
+        .sidebar-overlay.active { display: block; }
+
         /* --- Main Content --- */
-        .main-content { flex: 1; display: flex; flex-direction: column; position: relative; width: 100%; margin-left: 0; z-index: 1; }
+        .main-content { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            position: relative; 
+            width: 100%; 
+            margin-left: 0; 
+            z-index: 1; 
+        }
 
         @media (min-width: 769px) {
-            .sidebar { position: relative; transform: translateX(0); z-index: 100; }
-            .sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-width)); transform: translateX(0); }
+            .sidebar { 
+                position: relative; 
+                transform: translateX(0); /* Desktop default: visible */
+                z-index: 100; 
+            }
+            .sidebar.collapsed { 
+                margin-left: calc(-1 * var(--sidebar-width)); 
+                transform: translateX(0); 
+            }
             .sidebar-overlay { display: none !important; }
         }
 
-        /* HEADER FIXES FOR MOBILE */
+        /* ANDROID FIX: Header styling for mobile tap targets */
         .main-header { 
             display: flex; 
             align-items: center; 
@@ -133,48 +174,129 @@
             height: var(--header-height); 
             flex-shrink: 0; 
             position: relative;
-            z-index: 2000; /* Ensure header is above editor */
+            z-index: 2000;
             background-color: var(--background-color);
         }
 
         .toggle-sidebar { 
-            background: none; border: none; font-size: 1.8rem; cursor: pointer; color: var(--text-color); 
-            padding: 10px; /* Big touch target */
-            min-width: 44px; min-height: 44px;
+            background: none; 
+            border: none; 
+            font-size: 1.8rem; 
+            cursor: pointer; 
+            color: var(--text-color); 
+            padding: 10px;
+            min-width: 44px; 
+            min-height: 44px;
+            /* ANDROID FIX: Prevent zoom on double tap, improve response */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .search-container { position: relative; flex-grow: 1; min-width: 100px; }
-        #searchInput { width: 100%; padding: 0.5rem 1rem 0.5rem 2.5rem; border: 1px solid var(--border-color); border-radius: 20px; background-color: var(--editor-bg); color: var(--text-color); }
+        #searchInput { 
+            width: 100%; 
+            padding: 0.5rem 1rem 0.5rem 2.5rem; 
+            border: 1px solid var(--border-color); 
+            border-radius: 20px; 
+            background-color: var(--editor-bg); 
+            color: var(--text-color); 
+            font-size: 16px; /* ANDROID FIX: Prevent zoom on focus in Android Chrome */
+        }
         .search-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--secondary-color); }
-        #searchResults { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--editor-bg); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 5px; max-height: 400px; overflow-y: auto; z-index: 2100; box-shadow: var(--shadow); }
+        #searchResults { 
+            display: none; 
+            position: absolute; 
+            top: 100%; 
+            left: 0; 
+            right: 0; 
+            background: var(--editor-bg); 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            margin-top: 5px; 
+            max-height: 400px; 
+            overflow-y: auto; 
+            z-index: 2100; 
+            box-shadow: var(--shadow); 
+        }
         .search-result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid var(--border-color); }
         
         .header-actions { display: flex; align-items: center; gap: 5px; }
         .action-btn { 
-            background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-color); 
-            padding: 10px; /* Big touch target */
-            min-width: 44px; min-height: 44px;
-            display: flex; align-items: center; justify-content: center;
+            background: none; 
+            border: none; 
+            font-size: 1.5rem; 
+            cursor: pointer; 
+            color: var(--text-color); 
+            padding: 10px;
+            min-width: 44px; 
+            min-height: 44px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            /* ANDROID FIX: Better touch response */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .action-btn:disabled { color: var(--border-color); opacity: 0.5; }
         .action-btn.dirty { color: var(--primary-color); }
 
         /* --- NOTE VIEW --- */
-        .note-view { flex-grow: 1; display: flex; flex-direction: column; padding: 1rem; overflow-y: auto; -webkit-overflow-scrolling: touch; z-index: 10; }
+        .note-view { 
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 1rem; 
+            overflow-y: auto; 
+            -webkit-overflow-scrolling: touch; 
+            z-index: 10; 
+        }
         #welcomeScreen { text-align: center; margin: auto; padding: 1rem; }
-        .note-title-input { width: 100%; border: none; background: transparent; font-size: 1.8rem; font-weight: bold; color: var(--text-color); padding: 0.5rem 0; margin-bottom: 0.5rem; }
+        .note-title-input { 
+            width: 100%; 
+            border: none; 
+            background: transparent; 
+            font-size: 1.8rem; 
+            font-weight: bold; 
+            color: var(--text-color); 
+            padding: 0.5rem 0; 
+            margin-bottom: 0.5rem; 
+        }
         .note-title-input:focus { outline: none; }
         
         .tag-area { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin-bottom: 1rem; min-height: 28px; }
         .tag { display: inline-flex; align-items: center; background-color: var(--secondary-color); color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.85rem; }
         .tag-remove { margin-left: 0.5rem; cursor: pointer; font-weight: bold; }
-        .tag-input { border: none; background: transparent; color: var(--text-color); padding: 0.25rem; min-width: 100px; }
+        .tag-input { border: none; background: transparent; color: var(--text-color); padding: 0.25rem; min-width: 100px; font-size: 16px; }
         
         .editor-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); border-bottom: none; border-radius: 4px 4px 0 0; position: sticky; top: 0; z-index: 20; }
-        .editor-btn { background: none; border: none; width: 36px; height: 36px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-color); font-size: 1.2rem; }
+        .editor-btn { 
+            background: none; 
+            border: none; 
+            width: 44px; 
+            height: 44px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: var(--text-color); 
+            font-size: 1.2rem; 
+            touch-action: manipulation;
+        }
         .editor-btn:active { background-color: rgba(0, 0, 0, 0.1); }
         
-        .editor-content { flex-grow: 1; padding: 1rem; border: 1px solid var(--border-color); border-radius: 0 0 4px 4px; background-color: var(--editor-bg); color: var(--text-color); overflow-y: auto; line-height: 1.7; min-height: 50vh; }
+        .editor-content { 
+            flex-grow: 1; 
+            padding: 1rem; 
+            border: 1px solid var(--border-color); 
+            border-radius: 0 0 4px 4px; 
+            background-color: var(--editor-bg); 
+            color: var(--text-color); 
+            overflow-y: auto; 
+            line-height: 1.7; 
+            min-height: 50vh; 
+            font-size: 16px; /* ANDROID FIX: Prevent zoom */
+        }
         .editor-content:focus { outline: none; border-color: var(--primary-color); }
         .editor-content img { max-width: 100%; border-radius: 4px; cursor: pointer; }
         .editor-content a { color: var(--primary-color); cursor: pointer; text-decoration: underline; }
@@ -182,49 +304,79 @@
         
         /* FAB */
         .fab-container { position: fixed; bottom: 2rem; right: 1.5rem; z-index: 500; }
-        .fab { width: 60px; height: 60px; border-radius: 50%; background-color: var(--primary-color); color: white; border: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 2rem; transition: var(--transition); }
+        .fab { 
+            width: 60px; 
+            height: 60px; 
+            border-radius: 50%; 
+            background-color: var(--primary-color); 
+            color: white; 
+            border: none; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 2rem; 
+            transition: var(--transition); 
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
         .fab:active { transform: scale(0.9); }
         
         /* Modals */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; align-items: center; justify-content: center; }
+        .modal-overlay { 
+            display: none; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.5); 
+            z-index: 4000; 
+            align-items: center; 
+            justify-content: center; 
+        }
         .modal-overlay.active { display: flex; }
         .modal-content { background: var(--editor-bg); padding: 2rem; border-radius: 8px; width: 95%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-shrink: 0; }
         .modal-close { font-size: 1.5rem; cursor: pointer; background: none; border: none; color: var(--text-color); padding: 10px; }
         .modal-body { overflow-y: auto; }
-        #visualizationContainer, #footnotesBody { width: 100%; min-height: 40vh; background: var(--editor-bg); }
-        
-        /* Login */
-        .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: var(--background-color); position: fixed; top: 0; left: 0; width: 100%; z-index: 5000; }
-        .login-card { width: 90%; max-width: 400px; background-color: var(--editor-bg); border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); padding: 2rem; }
-        .form-control { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 4px; background-color: var(--background-color); color: var(--text-color); margin-bottom: 10px; font-size: 16px; }
-        .btn-primary { background-color: var(--primary-color); color: white; width: 100%; padding: 0.75rem; border: none; border-radius: 4px; font-size: 1.1rem; cursor: pointer; }
         
         /* Utility */
         .d-none { display: none !important; }
-        #contextMenu { display: none; position: absolute; background-color: var(--sidebar-bg); border: 1px solid var(--border-color); z-index: 4500; box-shadow: var(--shadow); }
-        #contextMenu button { display: block; width: 100%; padding: 0.75rem 1rem; border: none; background: none; color: var(--text-color); text-align: left; }
+        #contextMenu { 
+            display: none; 
+            position: absolute; 
+            background-color: var(--sidebar-bg); 
+            border: 1px solid var(--border-color); 
+            z-index: 4500; 
+            box-shadow: var(--shadow); 
+        }
+        #contextMenu button { 
+            display: block; 
+            width: 100%; 
+            padding: 0.75rem 1rem; 
+            border: none; 
+            background: none; 
+            color: var(--text-color); 
+            text-align: left; 
+            font-size: 16px;
+        }
         
         #mobileFileInput { display: none; }
-        .pdf-page-break { page-break-before: always; }
     </style>
 </head>
 <body>
-    <!-- Hidden File Input -->
     <input type="file" id="mobileFileInput" accept=".json">
 
-    <!-- Login Screen -->
-    <div id="loginScreen" class="login-container">
-        <!-- Content injected by JS -->
+    <div id="loginScreen" class="login-container" style="display:flex; align-items:center; justify-content:center; min-height:100vh; background-color: var(--background-color); position: fixed; top:0; left:0; width:100%; z-index:5000;">
+        <!-- Login injected by JS -->
     </div>
 
-    <!-- Main App -->
     <div id="mainApp" style="display:none;" class="app-container">
-        <!-- Sidebar Overlay (Mobile) -->
         <div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-        <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar collapsed">
+        <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">📚 KnowledgeVault</div>
                 <button id="mobileCloseSidebar" class="action-btn" style="display:none;">✕</button>
@@ -232,10 +384,9 @@
             <nav id="sidebarNav" class="sidebar-nav"></nav>
         </aside>
 
-        <!-- Main Content -->
         <main id="mainContent" class="main-content">
             <header class="main-header">
-                <button id="toggleSidebar" class="toggle-sidebar">☰</button>
+                <button id="toggleSidebar" class="toggle-sidebar" aria-label="Open Menu">☰</button>
                 <div class="search-container">
                     <span class="search-icon">🧠</span>
                     <input type="text" id="searchInput" placeholder="Search..." disabled>
@@ -243,23 +394,21 @@
                 </div>
                 <div class="header-actions">
                     <button id="loadDataBtn" class="action-btn" title="Load">📤</button>
-                    <!-- IMPORTANT: Disabled attribute removed to ensure clickable -->
                     <button id="saveDataBtn" class="action-btn" title="Save">💾</button>
                     <button id="mobileMenuBtn" class="action-btn">⋮</button>
                 </div>
             </header>
 
-            <!-- Extended Menu -->
             <div id="extendedMenu" style="display:none; position:absolute; top:60px; right:10px; background:var(--sidebar-bg); border:1px solid var(--border-color); border-radius:4px; z-index:2500; padding:10px; box-shadow:var(--shadow); min-width: 150px;">
-                <button id="generateEbookBtn" class="action-btn w-100" style="text-align:left;" disabled>📚 PDF</button>
-                <button id="screenshotBtn" class="action-btn w-100" style="text-align:left;">📸 Shot</button>
-                <button id="duplicateNoteBtn" class="action-btn w-100" style="text-align:left;" disabled>👯 Dupe</button>
-                <button id="addSubNoteBtn" class="action-btn w-100" style="text-align:left;" disabled>➕ Sub</button>
-                <button id="lockNoteBtn" class="action-btn w-100" style="text-align:left;" disabled>🔓 Lock</button>
-                <button id="visualizeBtn" class="action-btn w-100" style="text-align:left;" disabled>🕸️ Graph</button>
-                <button id="deleteNoteBtn" class="action-btn w-100" style="text-align:left; color:var(--danger-color);" disabled>🗑️ Del</button>
-                <button id="themeToggle" class="action-btn w-100" style="text-align:left;">🌙 Theme</button>
-                <button id="logoutBtn" class="action-btn w-100" style="text-align:left;">↩️ Log</button>
+                <button id="generateEbookBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;" disabled>📚 PDF</button>
+                <button id="screenshotBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;">📸 Shot</button>
+                <button id="duplicateNoteBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;" disabled>👯 Dupe</button>
+                <button id="addSubNoteBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;" disabled>➕ Sub</button>
+                <button id="lockNoteBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;" disabled>🔓 Lock</button>
+                <button id="visualizeBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;" disabled>🕸️ Graph</button>
+                <button id="deleteNoteBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start; color:var(--danger-color);" disabled>🗑️ Del</button>
+                <button id="themeToggle" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;">🌙 Theme</button>
+                <button id="logoutBtn" class="action-btn w-100" style="text-align:left; width:100%; justify-content:flex-start;">↩️ Log</button>
             </div>
 
             <div id="noteView" class="note-view">
@@ -287,14 +436,12 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="footnotesModal" class="modal-overlay"></div>
     <div id="visualizationModal" class="modal-overlay"></div>
     <div id="contextMenu"><button id="grabTextLinkBtn">Grab Text Link</button></div>
     
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Service Worker Registration for PWA ---
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
         }
@@ -303,7 +450,6 @@
             currentUser: null,
             activeItemId: null,
             items: [],
-            fileHandle: null,
             isDirty: false,
             phraseIndex: new Map(),
             settings: { darkMode: false, sidebarCollapsed: true },
@@ -345,20 +491,15 @@
             mobileFileInput: document.getElementById('mobileFileInput')
         };
         
-        // --- Helper for Mobile Taps ---
-        // This fixes issues where 'click' events are lost or delayed on phones
+        /* ANDROID FIX: Simplified tap listener that works reliably on Android Chrome */
         function addTapListener(element, callback) {
             if(!element) return;
+            // Just use click - modern mobile browsers handle this well with viewport meta tag
+            // touch-action: manipulation CSS removes the 300ms delay
             element.addEventListener('click', (e) => {
                 e.stopPropagation();
                 callback(e);
             });
-            // Also listen for touchstart to force immediate reaction
-            element.addEventListener('touchstart', (e) => {
-                e.stopPropagation(); 
-                // We don't preventDefault here to allow scrolling if user drags, 
-                // but for simple buttons, the click usually follows.
-            }, {passive: true});
         }
 
         function initializeApp() {
@@ -374,8 +515,9 @@
                     elements.mainApp.style.display = 'flex';
                     setupEventListeners();
                     loadSettings();
+                    /* ANDROID FIX: Check mobile on init */
                     if(window.innerWidth <= 768) {
-                        elements.mobileCloseSidebar.style.display = 'block';
+                        elements.mobileCloseSidebar.style.display = 'flex'; // Use flex instead of block for consistency
                     }
                 } else {
                     renderLoginScreen();
@@ -390,27 +532,29 @@
             let optionsHtml = users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
             
             elements.loginScreen.innerHTML = `
-                <div class="login-card">
-                    <div class="login-header"><h1>📚 KnowledgeVault</h1></div>
-                    <div class="form-group">
-                        <label>Select User</label>
-                        <select id="userSelect" class="form-control">
+                <div style="width: 90%; max-width: 400px; background-color: var(--editor-bg); border-radius: 8px; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1); padding: 2rem;">
+                    <div style="text-align:center; margin-bottom:1.5rem;"><h1>📚 KnowledgeVault</h1></div>
+                    <div style="margin-bottom:1rem;">
+                        <label style="display:block; margin-bottom:0.5rem; font-weight:bold;">Select User</label>
+                        <select id="userSelect" style="width:100%; padding:0.75rem; border:1px solid var(--border-color); border-radius:4px; background-color: var(--background-color); color:var(--text-color); font-size:16px;">
                             <option value="">-- Select User --</option>
                             ${optionsHtml}
                             <option value="--new--">Create New Account...</option>
                         </select>
                     </div>
-                    <div class="form-group d-none" id="newUsernameGroup">
-                        <input type="text" id="newUsername" class="form-control" placeholder="New Username">
+                    <div id="newUsernameGroup" style="display:none; margin-bottom:1rem;">
+                        <input type="text" id="newUsername" style="width:100%; padding:0.75rem; border:1px solid var(--border-color); border-radius:4px; background-color: var(--background-color); color:var(--text-color); font-size:16px;" placeholder="New Username">
                     </div>
-                    <div class="form-group">
-                        <input type="password" id="pin" class="form-control" placeholder="PIN (4 digits)" maxlength="4" inputmode="numeric">
+                    <div style="margin-bottom:1.5rem;">
+                        <input type="password" id="pin" style="width:100%; padding:0.75rem; border:1px solid var(--border-color); border-radius:4px; background-color: var(--background-color); color:var(--text-color); font-size:16px;" placeholder="PIN (4 digits)" maxlength="4" inputmode="numeric">
                     </div>
-                    <button id="loginBtn" class="btn-primary">Login / Create</button>
+                    <button id="loginBtn" style="background-color:var(--primary-color); color:white; width:100%; padding:0.75rem; border:none; border-radius:4px; font-size:1.1rem; cursor:pointer; touch-action:manipulation;">Login / Create</button>
                 </div>`;
             
             const userSelect = document.getElementById('userSelect');
-            userSelect.addEventListener('change', () => { document.getElementById('newUsernameGroup').classList.toggle('d-none', userSelect.value === '--new--'); });
+            userSelect.addEventListener('change', () => { 
+                document.getElementById('newUsernameGroup').style.display = userSelect.value === '--new--' ? 'block' : 'none'; 
+            });
             
             document.getElementById('loginBtn').addEventListener('click', handleLogin);
         }
@@ -442,7 +586,6 @@
 
         function setDirtyState(isDirty) {
             app.isDirty = isDirty;
-            // Visual feedback only, button is always active now
             if (isDirty) {
                 elements.saveDataBtn.classList.add('dirty');
             } else {
@@ -456,33 +599,30 @@
         }
 
         function setupEventListeners() {
-            // FIX: Using dedicated click handlers for robust mobile response
+            /* ANDROID FIX: Toggle sidebar with proper mobile detection */
             addTapListener(elements.toggleSidebar, toggleSidebar);
             if(elements.mobileCloseSidebar) addTapListener(elements.mobileCloseSidebar, toggleSidebar);
             addTapListener(elements.sidebarOverlay, toggleSidebar);
             
             addTapListener(elements.mobileMenuBtn, () => {
-                elements.extendedMenu.style.display = elements.extendedMenu.style.display === 'block' ? 'none' : 'block';
+                const isVisible = elements.extendedMenu.style.display === 'block';
+                elements.extendedMenu.style.display = isVisible ? 'none' : 'block';
             });
 
-            // Close extended menu when clicking elsewhere
             document.addEventListener('click', (e) => {
                  if (!elements.extendedMenu.contains(e.target) && e.target !== elements.mobileMenuBtn) {
                      elements.extendedMenu.style.display = 'none';
                  }
+                 elements.contextMenu.style.display = 'none';
+                 elements.searchResults.style.display = 'none';
             });
 
             addTapListener(elements.themeToggle, toggleTheme);
             addTapListener(elements.logoutBtn, logout);
             
-            // LOAD/SAVE HANDLERS
             addTapListener(elements.loadDataBtn, () => elements.mobileFileInput.click());
-            
             elements.mobileFileInput.addEventListener('change', handleAndroidLoad);
-            
-            // SAVE BUTTON FIX: ensure it is always clickable and provides feedback
             addTapListener(elements.saveDataBtn, handleAndroidSave);
-
             addTapListener(elements.deleteNoteBtn, handleDeleteNote);
             addTapListener(elements.visualizeBtn, renderVisualization);
             addTapListener(elements.lockNoteBtn, toggleNoteLock);
@@ -492,10 +632,9 @@
             addTapListener(elements.generateEbookBtn, handleGenerateEbook);
             addTapListener(elements.fab, () => addNewItem(null));
             
-            elements.noteTitleInput.addEventListener('input', debounce(() => { saveNote(); }, 500));
-            elements.editorContent.addEventListener('input', debounce(() => { saveNote(); }, 500));
+            elements.noteTitleInput.addEventListener('input', debounce(() => saveNote(), 500));
+            elements.editorContent.addEventListener('input', debounce(() => saveNote(), 500));
             
-            // Link Handling
             elements.editorContent.addEventListener('click', (e) => {
                 const link = e.target.closest('a');
                 if (link && link.href) {
@@ -509,12 +648,10 @@
             });
 
             elements.editorContent.addEventListener('contextmenu', handleContextMenu);
-            document.addEventListener('click', () => { elements.contextMenu.style.display = 'none'; elements.searchResults.style.display = 'none'; });
             elements.grabTextLinkBtn.addEventListener('click', handleGrabTextLink);
             elements.searchInput.addEventListener('input', debounce(handleSearch, 300));
             elements.searchInput.addEventListener('click', (e) => e.stopPropagation());
             
-            // Editor Buttons
             document.querySelectorAll('.editor-btn').forEach(button => {
                 addTapListener(button, (e) => {
                     const command = button.dataset.command;
@@ -550,10 +687,9 @@
                     renderAppFromState();
                     navigateToItem(null);
                     setDirtyState(false);
-                    // Enable buttons
                     elements.fab.disabled = false;
                     elements.searchInput.disabled = false;
-                    elements.mobileFileInput.value = '';
+                    elements.mobileFileInput.value = ''; // Reset so same file can be selected
                     alert(`Loaded successfully!`);
                 } catch (err) { alert("Failed to load file. Format error."); }
             };
@@ -561,9 +697,7 @@
         }
 
         function handleAndroidSave() {
-            // FIX: Added immediate feedback
             if (app.items.length === 0) return alert("Nothing to save yet.");
-            
             try {
                 const exportObj = {
                     version: "0.1.13",
@@ -581,11 +715,9 @@
                 a.click();
                 setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 0);
                 setDirtyState(false);
-                // alert("File downloading..."); // Optional feedback
             } catch (err) { alert("Failed to save: " + err.message); }
         }
 
-        // --- Core Logic ---
         function renderSidebar() {
             const itemMap = new Map(app.items.map(item => [item.id, { ...item, children: [] }]));
             const tree = [];
@@ -605,39 +737,31 @@
         function createNavItem(item) {
             const li = document.createElement('li');
             li.className = 'nav-item-container';
-            if (app.uiState.openNodes.has(item.id)) { li.classList.add('open'); }
+            if (app.uiState.openNodes.has(item.id)) li.classList.add('open');
             li.dataset.itemId = item.id;
             
-            // Drag Drop logic (simplified for mobile)
-            li.addEventListener('dragover', handleDragOver);
-            li.addEventListener('drop', handleDrop);
-
             const itemDiv = document.createElement('div');
             itemDiv.className = 'nav-item';
-            itemDiv.setAttribute('draggable', true);
             if (item.id === app.activeItemId) itemDiv.classList.add('active');
             
             const lockIcon = item.isLocked ? '<span class="lock-icon">🔒</span>' : '';
             itemDiv.innerHTML = `<span class="nav-item-toggle">${item.children.length > 0 ? '▶' : ''}</span><span class="nav-item-title">${item.title || "Untitled"}</span>${lockIcon}`;
             
-            // Click Handling
             itemDiv.addEventListener('click', (e) => {
                 if (!e.target.classList.contains('nav-item-toggle')) {
                     navigateToItem(item.id);
                     if (window.innerWidth <= 768) { 
-                        elements.sidebar.classList.add('collapsed'); 
-                        elements.sidebarOverlay.classList.remove('active'); 
+                        closeSidebar(); /* ANDROID FIX: Close on selection */
                     }
                 }
             });
             
-            itemDiv.addEventListener('dragstart', handleDragStart);
-
             const toggle = itemDiv.querySelector('.nav-item-toggle');
             toggle.addEventListener('click', (e) => {
                 e.stopPropagation();
                 li.classList.toggle('open');
-                if (li.classList.contains('open')) { app.uiState.openNodes.add(item.id); } else { app.uiState.openNodes.delete(item.id); }
+                if (li.classList.contains('open')) { app.uiState.openNodes.add(item.id); } 
+                else { app.uiState.openNodes.delete(item.id); }
             });
             
             li.appendChild(itemDiv);
@@ -651,7 +775,16 @@
 
         function addNewItem(parentId) {
             const newId = Date.now();
-            const newItem = { id: newId, parentId, title: "Untitled", content: "", tags: [], isLocked: false, createdAt: new Date().toISOString(), modifiedAt: new Date().toISOString() };
+            const newItem = { 
+                id: newId, 
+                parentId, 
+                title: "Untitled", 
+                content: "", 
+                tags: [], 
+                isLocked: false, 
+                createdAt: new Date().toISOString(), 
+                modifiedAt: new Date().toISOString() 
+            };
             app.items.push(newItem);
             setDirtyState(true);
             renderAppFromState();
@@ -663,13 +796,13 @@
             app.activeItemId = itemId;
             const item = app.items.find(i => i.id === itemId);
             const hasData = app.items.length > 0;
+            
             elements.welcomeScreen.classList.toggle('d-none', hasData);
             elements.noteTitleInput.classList.toggle('d-none', !item);
             elements.tagArea.classList.toggle('d-none', !item);
             elements.editorToolbar.classList.toggle('d-none', !item);
             elements.editorContent.classList.toggle('d-none', !item);
-
-            // Enable/disable buttons based on selection
+            
             elements.deleteNoteBtn.disabled = !item;
             elements.visualizeBtn.disabled = !item;
             elements.lockNoteBtn.disabled = !item;
@@ -680,21 +813,22 @@
             if (item) {
                 if (item.isLocked && !item.isTemporarilyUnlocked) {
                     const pin = prompt("Enter PIN:");
-                    if (pin === app.currentUser.pin) { item.isTemporarilyUnlocked = true; } else { alert("Incorrect PIN."); app.activeItemId = null; navigateToItem(null); return; }
+                    if (pin === app.currentUser.pin) { item.isTemporarilyUnlocked = true; } 
+                    else { alert("Incorrect PIN."); app.activeItemId = null; navigateToItem(null); return; }
                 }
                 elements.noteTitleInput.value = item.title;
                 elements.editorContent.innerHTML = await renderContentWithAutoLinks(item.content || "");
                 elements.noteTitleInput.disabled = false;
                 elements.editorContent.setAttribute('contenteditable', true);
                 renderTags(item.tags || []);
-                elements.lockNoteBtn.innerHTML = item.isLocked ? '🔒' : '🔓';
+                elements.lockNoteBtn.innerHTML = item.isLocked ? '🔒 Lock' : '🔓 Unlock';
             } else {
                 elements.noteTitleInput.value = "";
                 elements.editorContent.innerHTML = "";
                 elements.noteTitleInput.disabled = true;
                 elements.editorContent.setAttribute('contenteditable', false);
                 renderTags([]);
-                elements.lockNoteBtn.innerHTML = '🔓';
+                elements.lockNoteBtn.innerHTML = '🔓 Unlock';
             }
             
             document.querySelectorAll('.sidebar .nav-item.active').forEach(el => el.classList.remove('active'));
@@ -709,7 +843,13 @@
             const itemIndex = app.items.findIndex(i => i.id === app.activeItemId);
             if (itemIndex === -1) return;
             const tags = Array.from(elements.tagArea.querySelectorAll('.tag')).map(t => t.dataset.tag);
-            app.items[itemIndex] = { ...app.items[itemIndex], title: elements.noteTitleInput.value, content: elements.editorContent.innerHTML, tags: tags, modifiedAt: new Date().toISOString() };
+            app.items[itemIndex] = { 
+                ...app.items[itemIndex], 
+                title: elements.noteTitleInput.value, 
+                content: elements.editorContent.innerHTML, 
+                tags: tags, 
+                modifiedAt: new Date().toISOString() 
+            };
             setDirtyState(true);
             await buildPhraseIndex();
             const navTitle = document.querySelector(`li[data-item-id="${app.activeItemId}"] .nav-item-title`);
@@ -722,7 +862,7 @@
             if (item) {
                 item.isLocked = !item.isLocked;
                 item.isTemporarilyUnlocked = true;
-                elements.lockNoteBtn.innerHTML = item.isLocked ? '🔒' : '🔓';
+                elements.lockNoteBtn.innerHTML = item.isLocked ? '🔒 Lock' : '🔓 Unlock';
                 setDirtyState(true);
                 renderSidebar();
                 const navEl = document.querySelector(`.sidebar li[data-item-id="${item.id}"] > .nav-item`);
@@ -747,7 +887,8 @@
 
         function createTagElement(tagName) {
             const tagEl = document.createElement('span');
-            tagEl.className = 'tag'; tagEl.dataset.tag = tagName;
+            tagEl.className = 'tag'; 
+            tagEl.dataset.tag = tagName;
             tagEl.innerHTML = `${tagName} <span class="tag-remove">×</span>`;
             tagEl.querySelector('.tag-remove').addEventListener('click', () => { tagEl.remove(); saveNote(); });
             return tagEl;
@@ -757,7 +898,9 @@
             elements.tagArea.innerHTML = '';
             tags.forEach(tagName => { elements.tagArea.appendChild(createTagElement(tagName)); });
             const input = document.createElement('input');
-            input.type = 'text'; input.className = 'tag-input'; input.placeholder = 'Add tag...';
+            input.type = 'text'; 
+            input.className = 'tag-input'; 
+            input.placeholder = 'Add tag...';
             input.addEventListener('keydown', handleTagInput);
             elements.tagArea.appendChild(input);
         }
@@ -805,17 +948,26 @@
             const ids = app.phraseIndex.get(normalizedPhrase);
             if (!ids || ids.size < 2) return;
             const modal = document.getElementById('footnotesModal');
-            modal.innerHTML = `<div class="modal-content"><div class="modal-header"><h2 class="modal-title">Mentions of "${phrase}"</h2><button class="modal-close">×</button></div><div class="modal-body" id="footnotesBody"></div></div>`;
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Mentions of "${phrase}"</h2>
+                        <button class="modal-close">×</button>
+                    </div>
+                    <div class="modal-body" id="footnotesBody"></div>
+                </div>`;
             modal.querySelector('.modal-close').addEventListener('click', () => modal.classList.remove('active'));
             const otherItemIds = [...ids].filter(id => id !== app.activeItemId);
             const body = modal.querySelector('#footnotesBody');
-            if (otherItemIds.length === 0) { body.innerHTML = '<p>No other mentions found.</p>'; } else {
+            if (otherItemIds.length === 0) { 
+                body.innerHTML = '<p>No other mentions found.</p>'; 
+            } else {
                 otherItemIds.forEach(id => {
                     const item = app.items.find(i => i.id === id);
                     if (!item) return;
                     const footnoteDiv = document.createElement('div');
-                    footnoteDiv.className = 'footnote-item';
-                    footnoteDiv.innerHTML = `<div class="footnote-title">${item.title}</div>`;
+                    footnoteDiv.style.cssText = 'padding:10px; border-bottom:1px solid var(--border-color); cursor:pointer;';
+                    footnoteDiv.innerHTML = `<div style="font-weight:bold;">${item.title}</div>`;
                     footnoteDiv.addEventListener('click', () => { navigateToItem(item.id); modal.classList.remove('active'); });
                     body.appendChild(footnoteDiv);
                 });
@@ -823,18 +975,21 @@
             modal.classList.add('active');
         }
 
-        function handleDragStart(e) { e.stopPropagation(); e.dataTransfer.setData('text/plain', e.target.closest('.nav-item-container').dataset.itemId); }
-        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
-        function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-        function handleDrop(e) {
-            e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove('drag-over');
-            const draggedItemId = parseInt(e.dataTransfer.getData('text/plain'));
-            const targetItemId = parseInt(e.currentTarget.dataset.itemId);
-            if (draggedItemId === targetItemId) return;
-            const draggedItem = app.items.find(i => i.id === draggedItemId);
-            draggedItem.parentId = targetItemId;
-            setDirtyState(true);
-            renderAppFromState();
+        async function handleInternalLink(url) {
+            try {
+                const [noteIdStr, blockId] = url.replace('internal-link://', '').split('#');
+                await navigateToItem(Number(noteIdStr));
+                setTimeout(() => {
+                    if (blockId) {
+                        const block = elements.editorContent.querySelector(`[data-block-id="${blockId}"]`);
+                        if (block) { 
+                            block.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                            block.style.backgroundColor = 'rgba(74, 107, 175, 0.2)';
+                            setTimeout(() => block.style.backgroundColor = '', 2000);
+                        }
+                    }
+                }, 100);
+            } catch (error) { console.error("Link Error:", error); }
         }
         
         async function handleGrabTextLink() {
@@ -846,12 +1001,22 @@
                 if (container.nodeType === 1 && container.matches('p, div, li, h1, h2, h3, h4, h5, h6, blockquote')) {
                     if (!container.dataset.blockId) {
                         container.dataset.blockId = `kv-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-                        const itemIndex = app.items.findIndex(i => i.id === app.activeItemId);
-                        app.items[itemIndex].content = elements.editorContent.innerHTML;
-                        setDirtyState(true);
+                        saveNote();
                     }
                     const link = `internal-link://${app.activeItemId}#${container.dataset.blockId}`;
-                    navigator.clipboard.writeText(link).then(() => alert(`Link copied!`));
+                    try {
+                        await navigator.clipboard.writeText(link);
+                        alert(`Link copied to clipboard!`);
+                    } catch(err) {
+                        // Fallback for Android WebView if clipboard API not allowed
+                        const textArea = document.createElement("textarea");
+                        textArea.value = link;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(textArea);
+                        alert(`Link copied!`);
+                    }
                     return;
                 }
                 container = container.parentElement;
@@ -863,41 +1028,67 @@
             if (!app.activeItemId) return;
             const originalItem = app.items.find(i => i.id === app.activeItemId);
             const newId = Date.now();
-            const newItem = { ...originalItem, id: newId, title: `${originalItem.title} (Copy)`, createdAt: new Date().toISOString(), modifiedAt: new Date().toISOString() };
+            const newItem = { 
+                ...originalItem, 
+                id: newId, 
+                title: `${originalItem.title} (Copy)`, 
+                createdAt: new Date().toISOString(), 
+                modifiedAt: new Date().toISOString() 
+            };
             app.items.push(newItem);
             setDirtyState(true);
             renderAppFromState();
             navigateToItem(newId);
         }
         
-        async function handleInternalLink(url) {
-            try {
-                const [noteIdStr, blockId] = url.replace('internal-link://', '').split('#');
-                await navigateToItem(Number(noteIdStr));
-                setTimeout(() => {
-                    if (blockId) {
-                        const block = elements.editorContent.querySelector(`[data-block-id="${blockId}"]`);
-                        if (block) { block.scrollIntoView({ behavior: 'smooth', block: 'center' }); block.classList.add('block-highlight'); }
-                    }
-                }, 100);
-            } catch (error) { console.error("Link Error:", error); }
-        }
-        
         function renderVisualization() {
             const modal = document.getElementById('visualizationModal');
-            modal.innerHTML = `<div class="modal-content"><div class="modal-header"><h2 class="modal-title">Graph</h2><button class="modal-close">×</button></div><div class="modal-body"><div id="visualizationContainer" style="height: 60vh;"></div></div></div>`;
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Graph</h2>
+                        <button class="modal-close">×</button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="visualizationContainer" style="height: 60vh;"></div>
+                    </div>
+                </div>`;
             modal.querySelector('.modal-close').addEventListener('click', () => modal.classList.remove('active'));
             modal.classList.add('active');
-            const nodes = app.items.map(item => ({ id: item.id, label: item.title, shape: 'box', color: item.id === app.activeItemId ? '#ffc107' : '#97c2fc' }));
-            const edges = app.items.filter(item => item.parentId).map(item => ({ from: item.parentId, to: item.id, arrows: 'to' }));
+            
+            const nodes = app.items.map(item => ({ 
+                id: item.id, 
+                label: item.title, 
+                shape: 'box', 
+                color: item.id === app.activeItemId ? '#ffc107' : '#97c2fc' 
+            }));
+            const edges = app.items.filter(item => item.parentId).map(item => ({ 
+                from: item.parentId, 
+                to: item.id, 
+                arrows: 'to' 
+            }));
             const container = document.getElementById('visualizationContainer');
-            const network = new vis.Network(container, { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, { layout: { hierarchical: { direction: "UD", sortMethod: "directed", shakeTowards: "roots" } }, physics: { hierarchicalRepulsion: { nodeDistance: 150 } } });
-            network.on("doubleClick", params => { if (params.nodes.length > 0) { modal.classList.remove('active'); navigateToItem(params.nodes[0]); } });
+            const network = new vis.Network(container, { 
+                nodes: new vis.DataSet(nodes), 
+                edges: new vis.DataSet(edges) 
+            }, { 
+                layout: { hierarchical: { direction: "UD", sortMethod: "directed", shakeTowards: "roots" } }, 
+                physics: { hierarchicalRepulsion: { nodeDistance: 150 } } 
+            });
+            network.on("doubleClick", params => { 
+                if (params.nodes.length > 0) { 
+                    modal.classList.remove('active'); 
+                    navigateToItem(params.nodes[0]); 
+                } 
+            });
         }
         
         function handleScreenshot(isModal = false) {
             const targetElement = isModal ? document.getElementById('visualizationContainer') : document.getElementById('noteView');
-            html2canvas(targetElement, { backgroundColor: getComputedStyle(document.body).getPropertyValue('--editor-bg').trim(), useCORS: true }).then(canvas => {
+            html2canvas(targetElement, { 
+                backgroundColor: getComputedStyle(document.body).getPropertyValue('--editor-bg').trim(), 
+                useCORS: true 
+            }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = "screenshot.png";
                 link.href = canvas.toDataURL("image/png");
@@ -909,7 +1100,13 @@
             if (!app.activeItemId) return;
             const rootItem = app.items.find(i => i.id === app.activeItemId);
             if (!rootItem) return;
-            const opt = { margin: 0.5, filename: `${rootItem.title}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+            const opt = { 
+                margin: 0.5, 
+                filename: `${rootItem.title}.pdf`, 
+                image: { type: 'jpeg', quality: 0.98 }, 
+                html2canvas: { scale: 2 }, 
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } 
+            };
             const content = `<h1>${rootItem.title}</h1>${rootItem.content}`; 
             html2pdf().from(content).set(opt).save();
         }
@@ -939,7 +1136,9 @@
                         e.preventDefault();
                         const file = item.getAsFile();
                         const reader = new FileReader();
-                        reader.onload = event => { document.execCommand('insertImage', false, event.target.result); };
+                        reader.onload = event => { 
+                            document.execCommand('insertImage', false, event.target.result); 
+                        };
                         reader.readAsDataURL(file);
                         return;
                     }
@@ -950,43 +1149,89 @@
         function handleSearch() {
             const query = elements.searchInput.value.toLowerCase().trim();
             if (query.length < 2) { elements.searchResults.style.display = 'none'; return; }
-            const results = app.items.filter(item => !item.isLocked && (item.title.toLowerCase().includes(query) || (item.content || '').toLowerCase().includes(query)));
+            const results = app.items.filter(item => !item.isLocked && 
+                (item.title.toLowerCase().includes(query) || (item.content || '').toLowerCase().includes(query)));
             elements.searchResults.innerHTML = '';
             if(results.length > 0) {
                 results.forEach(res => {
                     const resDiv = document.createElement('div');
                     resDiv.className = 'search-result-item';
-                    resDiv.innerHTML = `<div class="search-result-item-title">${res.title}</div>`;
-                    resDiv.addEventListener('click', () => { navigateToItem(res.id); elements.searchResults.style.display = 'none'; elements.searchInput.value = ''; });
+                    resDiv.innerHTML = `<div style="font-weight:bold;">${res.title}</div>`;
+                    resDiv.addEventListener('click', () => { 
+                        navigateToItem(res.id); 
+                        elements.searchResults.style.display = 'none'; 
+                        elements.searchInput.value = ''; 
+                    });
                     elements.searchResults.appendChild(resDiv);
                 });
                 elements.searchResults.style.display = 'block';
-            } else { elements.searchResults.style.display = 'none'; }
+            } else { 
+                elements.searchResults.style.display = 'none'; 
+            }
         }
         
-        function handleContextMenu(e) { if (window.getSelection().toString().trim().length === 0) return; e.preventDefault(); elements.contextMenu.style.top = `${e.pageY}px`; elements.contextMenu.style.left = `${e.pageX}px`; elements.contextMenu.style.display = 'block'; }
+        function handleContextMenu(e) { 
+            if (window.getSelection().toString().trim().length === 0) return; 
+            e.preventDefault(); 
+            elements.contextMenu.style.top = `${e.pageY}px`; 
+            elements.contextMenu.style.left = `${e.pageX}px`; 
+            elements.contextMenu.style.display = 'block'; 
+        }
         
+        /* ANDROID FIX: Properly handle mobile vs desktop toggle */
         function toggleSidebar() { 
-            elements.sidebar.classList.toggle('collapsed'); 
-            const isClosed = elements.sidebar.classList.contains('collapsed');
+            const isMobile = window.innerWidth <= 768;
             
-            // Handle Overlay logic
-            if (window.innerWidth <= 768) {
-                if (!isClosed) {
-                    elements.sidebarOverlay.classList.add('active');
-                } else {
-                    elements.sidebarOverlay.classList.remove('active');
-                }
+            if (isMobile) {
+                // Mobile uses 'open' class which controls transform: translateX
+                elements.sidebar.classList.toggle('open');
+                const isOpen = elements.sidebar.classList.contains('open');
+                elements.sidebarOverlay.classList.toggle('active', isOpen);
+            } else {
+                // Desktop uses 'collapsed' class which controls margin-left
+                elements.sidebar.classList.toggle('collapsed');
+                const isCollapsed = elements.sidebar.classList.contains('collapsed');
+                app.settings.sidebarCollapsed = isCollapsed; 
+                saveSettings();
             }
-            
-            app.settings.sidebarCollapsed = isClosed; 
+        }
+        
+        /* ANDROID FIX: Explicit close function for navigation items */
+        function closeSidebar() {
+            if (window.innerWidth <= 768) {
+                elements.sidebar.classList.remove('open');
+                elements.sidebarOverlay.classList.remove('active');
+            }
+        }
+        
+        function toggleTheme() { 
+            const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; 
+            document.documentElement.setAttribute('data-theme', newTheme); 
+            app.settings.darkMode = newTheme === 'dark'; 
             saveSettings(); 
         }
         
-        function toggleTheme() { const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', newTheme); app.settings.darkMode = newTheme === 'dark'; saveSettings(); }
-        function loadSettings() { const settings = JSON.parse(localStorage.getItem(`kv_settings_${app.currentUser.username}`)); if (!settings) return; app.settings = settings; if (settings.darkMode) document.documentElement.setAttribute('data-theme', 'dark'); if (settings.sidebarCollapsed && window.innerWidth > 768) elements.sidebar.classList.add('collapsed'); }
-        function saveSettings() { localStorage.setItem(`kv_settings_${app.currentUser.username}`, JSON.stringify(app.settings)); }
-        function debounce(func, delay) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); }; }
+        function loadSettings() { 
+            const settings = JSON.parse(localStorage.getItem(`kv_settings_${app.currentUser.username}`)); 
+            if (!settings) return; 
+            app.settings = settings; 
+            if (settings.darkMode) document.documentElement.setAttribute('data-theme', 'dark'); 
+            if (settings.sidebarCollapsed && window.innerWidth > 768) {
+                elements.sidebar.classList.add('collapsed'); 
+            }
+        }
+        
+        function saveSettings() { 
+            localStorage.setItem(`kv_settings_${app.currentUser.username}`, JSON.stringify(app.settings)); 
+        }
+        
+        function debounce(func, delay) { 
+            let timeout; 
+            return function(...args) { 
+                clearTimeout(timeout); 
+                timeout = setTimeout(() => func.apply(this, args), delay); 
+            }; 
+        }
         
         function logout() {
             if (app.isDirty && !confirm("Unsaved changes. Logout?")) return;
@@ -996,9 +1241,8 @@
             app.activeItemId = null;
             elements.sidebarNav.innerHTML = '';
             navigateToItem(null);
-            elements.saveDataBtn.disabled = true;
-            elements.fab.disabled = true;
-            elements.searchInput.disabled = true;
+            elements.sidebar.classList.remove('open', 'collapsed');
+            elements.sidebarOverlay.classList.remove('active');
             renderLoginScreen();
         }
 
